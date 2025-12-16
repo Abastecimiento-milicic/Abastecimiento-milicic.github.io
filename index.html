@@ -6,413 +6,257 @@
   <title>Dashboard Entregas</title>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background:#fafafa; }
-    h2 { margin: 0 0 14px 0; }
+    h2 { margin-bottom: 12px; }
 
     .row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; }
     .box { background:#fff; border:1px solid #e3e3e3; border-radius:12px; padding:14px; }
     .filter { min-width: 320px; }
+
     label { font-size: 12px; color:#444; }
     select { width:100%; padding:8px 10px; border-radius:10px; border:1px solid #ddd; }
 
-    .kpis { display:flex; gap:12px; flex-wrap:wrap; }
-    .kpi { min-width: 210px; }
-    .kpi .title { font-size:12px; color:#666; }
-    .kpi .value { font-size:28px; font-weight:800; margin-top:6px; }
-    .kpi .sub { font-size:12px; color:#666; margin-top:4px; }
+    .chartWrap { height: 420px; margin-top: 16px; }
 
-    .grid { display:grid; grid-template-columns: 1fr; gap:16px; margin-top:16px; }
-    .chartWrap { height: 380px; }
-
-    .tableWrap { max-height: 55vh; overflow:auto; }
-    table { border-collapse: collapse; width:100%; background:#fff; }
-    th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; text-align:left; }
-    th { background:#f2f2f2; position: sticky; top: 0; z-index: 1; }
-
-    .hint { font-size:12px; color:#666; margin-top:8px; }
-    .error { margin-top: 14px; padding: 10px 12px; background: #fff3f3; border: 1px solid #ffcccc; border-radius: 10px; color:#a40000; }
+    .error {
+      margin-top: 14px; padding: 10px 12px;
+      background: #fff3f3; border: 1px solid #ffcccc;
+      border-radius: 10px; color:#a40000;
+    }
   </style>
 </head>
 
 <body>
-  <h2>Entregas por mes</h2>
 
-  <div class="row">
-    <div class="box filter">
-      <label for="clienteSelect"><b>Cliente</b></label>
-      <select id="clienteSelect">
-        <option value="">Todos</option>
-      </select>
-      <div class="hint" id="clienteHint"></div>
-    </div>
+<h2>Entregas por mes (AT / FT / No entregados)</h2>
 
-    <div class="kpis">
-      <div class="box kpi">
-        <div class="title">Entregados AT</div>
-        <div class="value" id="kpiAT">-</div>
-        <div class="sub">%AT sobre total</div>
-      </div>
-
-      <div class="box kpi">
-        <div class="title">Entregados FT</div>
-        <div class="value" id="kpiFT">-</div>
-        <div class="sub">%FT sobre total</div>
-      </div>
-
-      <div class="box kpi">
-        <div class="title">No entregados</div>
-        <div class="value" id="kpiNO">-</div>
-        <div class="sub">%No entregados sobre total</div>
-      </div>
-
-      <div class="box kpi">
-        <div class="title">Total pedidos</div>
-        <div class="value" id="kpiTotal">-</div>
-        <div class="sub">AT + FT + No entregados</div>
-      </div>
-    </div>
+<div class="row">
+  <div class="box filter">
+    <label for="clienteSelect"><b>Cliente</b></label>
+    <select id="clienteSelect">
+      <option value="">Todos</option>
+    </select>
   </div>
+</div>
 
-  <div id="msg"></div>
+<div id="msg"></div>
 
-  <div class="grid">
-    <div class="box">
-      <div style="font-weight:700; margin-bottom:8px;">AT / FT / No entregados por mes (columnas apiladas)</div>
-      <div class="chartWrap"><canvas id="chartMes"></canvas></div>
-      <div class="hint">
-        Mes = <b>FECHA ENTREGA ESPERADA</b> (dd/mm/aaaa). El filtro de cliente afecta el gráfico.
-      </div>
-    </div>
-
-    <div class="box">
-      <div style="font-weight:700; margin-bottom:8px;">Detalle (primeras filas)</div>
-      <div class="tableWrap">
-        <table id="tabla"></table>
-      </div>
-      <div class="hint">Se muestran 30 filas.</div>
-    </div>
-  </div>
+<div class="box chartWrap">
+  <canvas id="chartMes"></canvas>
+</div>
 
 <script>
-  // ============================
-  // CONFIG
-  // ============================
-  const csvUrl = "CUMPLIMIENTO_2025.csv"; // <-- poné el nombre exacto del CSV en GitHub
-  const DELIM  = ";";
+/* ============================
+   CONFIG
+============================ */
+const csvUrl = "CUMPLIMIENTO_2025.csv";   // 👈 nombre exacto del CSV
+const DELIM = ";";
 
-  // Fecha / Cliente
-  const FECHA_COL = "FECHA ENTREGA ESPERADA";
-  const CLIENT_CANDIDATES = ["CLIENTE NRO.", "CLIENTE"];
+const FECHA_COL = "FECHA ENTREGA ESPERADA";
+const CLIENT_CANDIDATES = ["CLIENTE NRO.", "CLIENTE"];
 
-  // Métricas (sin ESTADO)
-  const AT_COL = "ENTREGADOS AT";
-  const FT_COL = "ENTREGADOS FT";
-  const NO_COL = "NO ENTREGADOS";
+const AT_COL = "ENTREGADOS AT";
+const FT_COL = "ENTREGADOS FT";
+const NO_COL = "NO ENTREGADOS";
 
-  const MAX_ROWS_TABLE = 30;
+/* ============================
+   ESTADO
+============================ */
+let data = [];
+let headers = [];
+let CLIENT_COL = null;
+let chartMes = null;
 
-  // ============================
-  // ESTADO
-  // ============================
-  let data = [];
-  let headers = [];
-  let CLIENT_COL = null;
+/* ============================
+   HELPERS
+============================ */
+const clean = v => (v ?? "").toString().trim();
 
-  let chartMes = null;
+function toNumber(v) {
+  let x = clean(v);
+  if (!x) return 0;
+  if (x.includes(",")) x = x.replace(/\./g, "").replace(",", ".");
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
+}
 
-  // ============================
-  // Parser CSV robusto (comillas)
-  // ============================
-  function parseDelimited(text, delimiter = ";") {
-    const rows = [];
-    let row = [];
-    let cur = "";
-    let inQuotes = false;
+function parseDateDMY(s) {
+  const p = clean(s).split("/");
+  if (p.length !== 3) return null;
+  const [d,m,y] = p.map(n => parseInt(n,10));
+  if (!y || !m || !d) return null;
+  return new Date(y, m-1, d);
+}
 
-    text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+function monthKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+}
 
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
+function showError(msg) {
+  document.getElementById("msg").innerHTML = `<div class="error">${msg}</div>`;
+}
 
-      if (ch === '"') {
-        if (inQuotes && text[i + 1] === '"') { cur += '"'; i++; }
-        else { inQuotes = !inQuotes; }
-      } else if (ch === delimiter && !inQuotes) {
-        row.push(cur); cur = "";
-      } else if (ch === "\n" && !inQuotes) {
-        row.push(cur); rows.push(row);
-        row = []; cur = "";
-      } else {
-        cur += ch;
-      }
-    }
-    if (cur.length > 0 || row.length > 0) { row.push(cur); rows.push(row); }
-    return rows;
+/* ============================
+   CSV PARSER
+============================ */
+function parseDelimited(text, delimiter=";") {
+  const rows = [];
+  let row = [], cur = "", inQuotes = false;
+
+  text = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+
+  for (let i=0;i<text.length;i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQuotes && text[i+1] === '"') { cur += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === delimiter && !inQuotes) {
+      row.push(cur); cur = "";
+    } else if (ch === "\n" && !inQuotes) {
+      row.push(cur); rows.push(row);
+      row = []; cur = "";
+    } else cur += ch;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+
+/* ============================
+   SELECT CLIENTE
+============================ */
+function renderClientes() {
+  const sel = document.getElementById("clienteSelect");
+  const clientes = [...new Set(data.map(r => clean(r[CLIENT_COL])).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'es'));
+
+  sel.querySelectorAll("option:not([value=''])").forEach(o=>o.remove());
+
+  clientes.forEach(c=>{
+    const o=document.createElement("option");
+    o.value=c; o.textContent=c;
+    sel.appendChild(o);
+  });
+}
+
+/* ============================
+   GRÁFICO 100% APILADO
+============================ */
+function buildChartMes(rows) {
+  const agg = new Map();
+  const monthsSet = new Set();
+
+  for (const r of rows) {
+    const d = parseDateDMY(r[FECHA_COL]);
+    if (!d) continue;
+
+    const mk = monthKey(d);
+    monthsSet.add(mk);
+
+    if (!agg.has(mk)) agg.set(mk,{at:0,ft:0,no:0});
+    const c = agg.get(mk);
+
+    c.at += toNumber(r[AT_COL]);
+    c.ft += toNumber(r[FT_COL]);
+    c.no += toNumber(r[NO_COL]);
   }
 
-  const clean = v => (v ?? "").toString().trim();
+  const months = [...monthsSet].sort();
+  const qAT = months.map(m=>agg.get(m)?.at??0);
+  const qFT = months.map(m=>agg.get(m)?.ft??0);
+  const qNO = months.map(m=>agg.get(m)?.no??0);
 
-  // Convierte "1.234,56" o "1234,56" o "1234" a número
-  function toNumber(v) {
-    const s = clean(v);
-    if (!s) return 0;
+  const pAT = qAT.map((v,i)=>{const t=qAT[i]+qFT[i]+qNO[i]; return t? v/t*100:0});
+  const pFT = qFT.map((v,i)=>{const t=qAT[i]+qFT[i]+qNO[i]; return t? v/t*100:0});
+  const pNO = qNO.map((v,i)=>{const t=qAT[i]+qFT[i]+qNO[i]; return t? v/t*100:0});
 
-    // sacar espacios
-    let x = s.replace(/\s/g, "");
+  const ctx = document.getElementById("chartMes").getContext("2d");
+  if (chartMes) chartMes.destroy();
 
-    // si viene con separador decimal coma, pasarlo a punto
-    // y remover separadores de miles
-    // Ej: "1.234,56" -> "1234.56"
-    if (x.includes(",")) {
-      x = x.replace(/\./g, "").replace(",", ".");
-    }
-
-    // si viene "1,234" (raro), lo tratamos como decimal
-    // (ya queda con punto)
-    const n = Number(x);
-    return Number.isFinite(n) ? n : 0;
-  }
-
-  function parseDateDMY(s) {
-    const v = clean(s);
-    if (!v) return null;
-    const parts = v.split("/");
-    if (parts.length !== 3) return null;
-
-    const dd = parseInt(parts[0], 10);
-    const mm = parseInt(parts[1], 10);
-    const yyyy = parseInt(parts[2], 10);
-
-    if (!yyyy || !mm || !dd) return null;
-    return new Date(yyyy, mm - 1, dd);
-  }
-
-  function monthKey(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    return `${y}-${m}`; // YYYY-MM
-  }
-
-  function showError(msg) {
-    document.getElementById("msg").innerHTML = `<div class="error">${msg}</div>`;
-  }
-
-  function fmtInt(n) {
-    return Number(n).toLocaleString("es-AR", { maximumFractionDigits: 0 });
-  }
-
-  function fmtPct(x) {
-    if (!isFinite(x)) return "-";
-    return (x * 100).toFixed(1).replace(".", ",") + "%";
-  }
-
-  // ============================
-  // UI: Select de clientes
-  // ============================
-  function renderClientesSelect() {
-    const sel = document.getElementById("clienteSelect");
-
-    const clientes = [...new Set(
-      data.map(r => clean(r[CLIENT_COL])).filter(Boolean)
-    )].sort((a,b) => a.localeCompare(b, 'es'));
-
-    sel.querySelectorAll("option:not([value=''])").forEach(o => o.remove());
-
-    clientes.forEach(c => {
-      const opt = document.createElement("option");
-      opt.value = c;
-      opt.textContent = c;
-      sel.appendChild(opt);
-    });
-  }
-
-  // ============================
-  // KPIs (sumas)
-  // ============================
-  function calcKPIs(rows) {
-    let at = 0, ft = 0, no = 0;
-
-    for (const r of rows) {
-      at += toNumber(r[AT_COL]);
-      ft += toNumber(r[FT_COL]);
-      no += toNumber(r[NO_COL]);
-    }
-
-    const total = at + ft + no;
-    const pctAT = total > 0 ? at / total : NaN;
-    const pctFT = total > 0 ? ft / total : NaN;
-    const pctNO = total > 0 ? no / total : NaN;
-
-    return { at, ft, no, total, pctAT, pctFT, pctNO };
-  }
-
-  // ============================
-  // Gráfico: Columnas apiladas por mes
-  // ============================
-  function buildChartMes(rows) {
-    // mes -> {at, ft, no}
-    const agg = new Map();
-    const monthsSet = new Set();
-
-    for (const r of rows) {
-      const d = parseDateDMY(r[FECHA_COL]);
-      if (!d) continue;
-
-      const mk = monthKey(d);
-      monthsSet.add(mk);
-
-      if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0 });
-      const cell = agg.get(mk);
-
-      cell.at += toNumber(r[AT_COL]);
-      cell.ft += toNumber(r[FT_COL]);
-      cell.no += toNumber(r[NO_COL]);
-    }
-
-    const months = [...monthsSet].sort();
-    const valsAT = months.map(m => (agg.get(m)?.at ?? 0));
-    const valsFT = months.map(m => (agg.get(m)?.ft ?? 0));
-    const valsNO = months.map(m => (agg.get(m)?.no ?? 0));
-
-    const ctx = document.getElementById("chartMes").getContext("2d");
-    if (chartMes) chartMes.destroy();
-
-    chartMes = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: months,
-        datasets: [
-          { label: "Entregados AT", data: valsAT, stack: "stack1" },
-          { label: "Entregados FT", data: valsFT, stack: "stack1" },
-          { label: "No entregados", data: valsNO, stack: "stack1" }
-        ]
+  chartMes = new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:months,
+      datasets:[
+        {label:"Entregados AT", data:pAT, _q:qAT, stack:"s"},
+        {label:"Entregados FT", data:pFT, _q:qFT, stack:"s"},
+        {label:"No entregados", data:pNO, _q:qNO, stack:"s"}
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{
+        x:{stacked:true},
+        y:{stacked:true, max:100, ticks:{callback:v=>v+"%"}}
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { stacked: true },
-          y: { stacked: true, beginAtZero: true }
+      plugins:{
+        legend:{position:"bottom"},
+        tooltip:{
+          callbacks:{
+            label:c=>{
+              const pct=c.parsed.y.toFixed(1);
+              const qty=c.dataset._q[c.dataIndex];
+              return `${c.dataset.label}: ${qty} (${pct}%)`;
+            }
+          }
         },
-        plugins: {
-          legend: { position: "bottom" },
-          tooltip: { mode: "index", intersect: false }
+        datalabels:{
+          formatter:(v,c)=>{
+            const q=c.dataset._q[c.dataIndex];
+            if (!q || v<4) return "";
+            return `${q} (${v.toFixed(1)}%)`;
+          },
+          color:"#000",
+          anchor:"center",
+          align:"center"
         }
       }
+    },
+    plugins:[ChartDataLabels]
+  });
+}
+
+/* ============================
+   FILTRO
+============================ */
+function applyFilter() {
+  const sel = document.getElementById("clienteSelect").value;
+  const filtered = sel ? data.filter(r=>clean(r[CLIENT_COL])===sel) : data;
+  buildChartMes(filtered);
+}
+
+/* ============================
+   LOAD
+============================ */
+fetch(csvUrl)
+  .then(r=>r.text())
+  .then(text=>{
+    const m = parseDelimited(text,DELIM);
+    headers = m[0].map(clean);
+
+    CLIENT_COL = CLIENT_CANDIDATES.find(c=>headers.includes(c));
+    if (!CLIENT_COL) return showError("No encuentro columna CLIENTE");
+
+    [FECHA_COL,AT_COL,FT_COL,NO_COL].forEach(c=>{
+      if (!headers.includes(c)) showError("Falta columna: "+c);
     });
-  }
 
-  // ============================
-  // Tabla (muestra columnas clave)
-  // ============================
-  function renderTable(rows) {
-    const table = document.getElementById("tabla");
-    table.innerHTML = "";
-
-    const preferred = [CLIENT_COL, FECHA_COL, AT_COL, FT_COL, NO_COL, "PRIORIDAD", "CLASE DE DOC", "REF.CLIENTE", "DOC. REF"];
-    const cols = [
-      ...preferred.filter(c => headers.includes(c)),
-      ...headers.filter(h => !preferred.includes(h)).slice(0, 8)
-    ];
-
-    const thead = document.createElement("thead");
-    const trh = document.createElement("tr");
-    cols.forEach(h => {
-      const th = document.createElement("th");
-      th.textContent = h;
-      trh.appendChild(th);
+    data = m.slice(1).map(r=>{
+      const o={}; headers.forEach((h,i)=>o[h]=clean(r[i]));
+      return o;
     });
-    thead.appendChild(trh);
-    table.appendChild(thead);
 
-    const tbody = document.createElement("tbody");
-    rows.slice(0, MAX_ROWS_TABLE).forEach(r => {
-      const tr = document.createElement("tr");
-      cols.forEach(h => {
-        const td = document.createElement("td");
-        td.textContent = r[h] ?? "";
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-  }
-
-  // ============================
-  // Aplicar filtro y refrescar
-  // ============================
-  function applyFilter() {
-    const selCliente = document.getElementById("clienteSelect").value;
-
-    const filtered = selCliente
-      ? data.filter(r => clean(r[CLIENT_COL]) === selCliente)
-      : data;
-
-    const k = calcKPIs(filtered);
-
-    // KPIs (valores)
-    document.getElementById("kpiAT").textContent = fmtInt(k.at);
-    document.getElementById("kpiFT").textContent = fmtInt(k.ft);
-    document.getElementById("kpiNO").textContent = fmtInt(k.no);
-    document.getElementById("kpiTotal").textContent = fmtInt(k.total);
-
-    // Subtexto con % (en el mismo card, reemplazando el sub)
-    document.querySelector("#kpiAT + .sub").textContent = "%AT: " + fmtPct(k.pctAT);
-    document.querySelector("#kpiFT + .sub").textContent = "%FT: " + fmtPct(k.pctFT);
-    document.querySelector("#kpiNO + .sub").textContent = "%No entregados: " + fmtPct(k.pctNO);
-
-    buildChartMes(filtered);
-    renderTable(filtered);
-  }
-
-  // ============================
-  // Carga inicial
-  // ============================
-  fetch(csvUrl)
-    .then(r => r.text())
-    .then(text => {
-      const matrix = parseDelimited(text, DELIM);
-      if (!matrix.length || matrix.length < 2) {
-        showError("El CSV parece vacío o no tiene filas suficientes.");
-        return;
-      }
-
-      headers = matrix[0].map(clean);
-      const body = matrix.slice(1);
-
-      CLIENT_COL = CLIENT_CANDIDATES.find(c => headers.includes(c)) || null;
-
-      const missing = [];
-      if (!CLIENT_COL) missing.push("CLIENTE (se probó: " + CLIENT_CANDIDATES.join(" / ") + ")");
-      if (!headers.includes(FECHA_COL)) missing.push(FECHA_COL);
-      if (!headers.includes(AT_COL)) missing.push(AT_COL);
-      if (!headers.includes(FT_COL)) missing.push(FT_COL);
-      if (!headers.includes(NO_COL)) missing.push(NO_COL);
-
-      if (missing.length) {
-        showError("No encuentro estas columnas en el CSV: <b>" + missing.join(", ") + "</b>.<br><br>" +
-                  "Revisá los encabezados o decime los nombres exactos y te lo ajusto.");
-        return;
-      }
-
-      data = body.map(cols => {
-        const obj = {};
-        headers.forEach((h, i) => obj[h] = clean(cols[i]));
-        return obj;
-      });
-
-      document.getElementById("clienteHint").textContent = `Filtro usando columna: ${CLIENT_COL}`;
-
-      renderClientesSelect();
-      applyFilter();
-      document.getElementById("clienteSelect").addEventListener("change", applyFilter);
-    })
-    .catch(err => {
-      showError("Error cargando el CSV. Revisá el nombre del archivo (csvUrl) y que esté en el repo.");
-      console.error(err);
-    });
+    renderClientes();
+    applyFilter();
+    document.getElementById("clienteSelect").addEventListener("change",applyFilter);
+  })
+  .catch(e=>{
+    showError("Error cargando CSV");
+    console.error(e);
+  });
 </script>
 
 </body>
