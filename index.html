@@ -175,20 +175,26 @@
   // total pedidos = recuento de filas donde NRO_COL no está vacío
   // cumplidos = esas filas donde ESTADO_COL = CUMPLIDO
   // ============================
-  function rowsWithPedido(rows) {
-    return rows.filter(r => clean(r[NRO_COL]) !== "");
-  }
-
   function calcKPIs(rows) {
-    const base = rowsWithPedido(rows);
-    const total = base.length;
+  const base = rowsWithPedido(rows);
+  const total = base.length;
 
-    const cumplidos = base.filter(r => clean(r[ESTADO_COL]).toUpperCase() === CUMPLIDO_VALUE).length;
-    const pendientes = Math.max(total - cumplidos, 0);
-    const pct = total > 0 ? (cumplidos / total) : NaN;
+  // Normalizo a MAYÚSCULAS para comparar
+  const noCumplidos = base.filter(r => {
+    const estado = clean(r[ESTADO_COL]).toUpperCase();
+    return estado !== CUMPLIDO_VALUE; // todo lo que NO es CUMPLIDO
+  }).length;
 
-    return { total, cumplidos, pendientes, pct, base };
-  }
+  const cumplidos = total - noCumplidos;
+
+  // Si querés mostrar "cumplimiento"
+  const pctCumplimiento = total > 0 ? (cumplidos / total) : NaN;
+
+  // Si querés mostrar "incumplimiento"
+  const pctNoCumplido = total > 0 ? (noCumplidos / total) : NaN;
+
+  return { total, cumplidos, noCumplidos, pctCumplimiento, pctNoCumplido, base };
+}
 
   // ============================
   // UI: Select de clientes
@@ -405,3 +411,4 @@
 
 </body>
 </html>
+
