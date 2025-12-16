@@ -21,6 +21,12 @@
 
     .chartWrap { height: 420px; margin-top: 16px; }
 
+    .kpi { min-width: 220px; }
+    .kpi .title { font-size:12px; color:#666; }
+    .kpi .value { font-size:28px; font-weight:800; margin-top:6px; }
+    .kpi .sub { font-size:12px; color:#666; margin-top:4px; }
+
+
     .error {
       margin-top: 14px; padding: 10px 12px;
       background: #fff3f3; border: 1px solid #ffcccc;
@@ -48,6 +54,32 @@
   <canvas id="chartMes"></canvas>
 </div>
 
+<div class="row" style="margin-top:14px;">
+  <div class="box kpi">
+    <div class="title">Cantidad de pedidos</div>
+    <div class="value" id="kpiTotal">-</div>
+    <div class="sub">AT + FT + No entregados</div>
+  </div>
+
+  <div class="box kpi">
+    <div class="title">% Entregados AT</div>
+    <div class="value" id="kpiATpct">-</div>
+    <div class="sub" id="kpiATqty">-</div>
+  </div>
+
+  <div class="box kpi">
+    <div class="title">% Entregados FT</div>
+    <div class="value" id="kpiFTpct">-</div>
+    <div class="sub" id="kpiFTqty">-</div>
+  </div>
+
+  <div class="box kpi">
+    <div class="title">% No entregados</div>
+    <div class="value" id="kpiNOpct">-</div>
+    <div class="sub" id="kpiNOqty">-</div>
+  </div>
+</div>
+
 <script>
 /* ============================
    CONFIG
@@ -73,6 +105,8 @@ let chartMes = null;
 /* ============================
    HELPERS
 ============================ */
+
+
 const clean = v => (v ?? "").toString().trim();
 
 function toNumber(v) {
@@ -98,6 +132,45 @@ function monthKey(d) {
 function showError(msg) {
   document.getElementById("msg").innerHTML = `<div class="error">${msg}</div>`;
 }
+
+function fmtInt(n) {
+  return Number(n).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+}
+
+function fmtPct01(x) {
+  if (!isFinite(x)) return "-";
+  return (x * 100).toFixed(1).replace(".", ",") + "%";
+}
+
+function calcTotals(rows) {
+  let at = 0, ft = 0, no = 0;
+  for (const r of rows) {
+    at += toNumber(r[AT_COL]);
+    ft += toNumber(r[FT_COL]);
+    no += toNumber(r[NO_COL]);
+  }
+  const total = at + ft + no;
+  return { at, ft, no, total };
+}
+
+function updateKPIs(t) {
+  const { at, ft, no, total } = t;
+  const pctAT = total ? at / total : NaN;
+  const pctFT = total ? ft / total : NaN;
+  const pctNO = total ? no / total : NaN;
+
+  document.getElementById("kpiTotal").textContent = fmtInt(total);
+
+  document.getElementById("kpiATpct").textContent = fmtPct01(pctAT);
+  document.getElementById("kpiATqty").textContent = `Cantidad: ${fmtInt(at)}`;
+
+  document.getElementById("kpiFTpct").textContent = fmtPct01(pctFT);
+  document.getElementById("kpiFTqty").textContent = `Cantidad: ${fmtInt(ft)}`;
+
+  document.getElementById("kpiNOpct").textContent = fmtPct01(pctNO);
+  document.getElementById("kpiNOqty").textContent = `Cantidad: ${fmtInt(no)}`;
+}
+
 
 /* ============================
    CSV PARSER
@@ -224,9 +297,16 @@ function buildChartMes(rows) {
 ============================ */
 function applyFilter() {
   const sel = document.getElementById("clienteSelect").value;
-  const filtered = sel ? data.filter(r=>clean(r[CLIENT_COL])===sel) : data;
+  const filtered = sel ? data.filter(r => clean(r[CLIENT_COL]) === sel) : data;
+
+  // KPIs
+  const totals = calcTotals(filtered);
+  updateKPIs(totals);
+
+  // Gráfico
   buildChartMes(filtered);
 }
+
 
 /* ============================
    LOAD
@@ -261,6 +341,7 @@ fetch(csvUrl)
 
 </body>
 </html>
+
 
 
 
