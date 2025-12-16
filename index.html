@@ -46,20 +46,20 @@
       <select id="clienteSelect">
         <option value="">Todos</option>
       </select>
-      <div class="hint">Filtra KPIs, gráficos y tabla por cliente.</div>
+      <div class="hint" id="clienteHint"></div>
     </div>
 
     <div class="kpis">
       <div class="box kpi">
         <div class="title">Pedidos totales</div>
         <div class="value" id="kpiTotal">-</div>
-        <div class="sub">Filas con <b>NRO. VA01/VA21</b> no vacío</div>
+        <div class="sub" id="kpiTotalSub"></div>
       </div>
 
       <div class="box kpi">
         <div class="title">Pedidos cumplidos</div>
         <div class="value" id="kpiCumplidos">-</div>
-        <div class="sub"><b>ESTADO ITEM</b> = CUMPLIDO</div>
+        <div class="sub" id="kpiCumplidosSub"></div>
       </div>
 
       <div class="box kpi">
@@ -80,15 +80,15 @@
 
   <div class="grid">
     <div class="box">
-      <div style="font-weight:700; margin-bottom:8px;">Cumplimiento por cliente (Top 10 por pedidos)</div>
-      <div class="chartWrap"><canvas id="chartClientes"></canvas></div>
-      <div class="hint">El % se calcula como (Cumplidos / Totales) por cliente.</div>
+      <div style="font-weight:700; margin-bottom:8px;">Cumplimiento por mes</div>
+      <div class="chartWrap"><canvas id="chartMes"></canvas></div>
+      <div class="hint">Usa <b>FECHA ENTREGA ESPERADA</b> (dd/mm/aaaa). Si elegís un cliente, se grafica ese cliente. Si no, Top 5 clientes por volumen.</div>
     </div>
 
     <div class="box">
       <div style="font-weight:700; margin-bottom:8px;">Distribución de estados (filtrado)</div>
       <div class="chartWrap"><canvas id="chartEstados"></canvas></div>
-      <div class="hint">Cuenta filas con NRO. VA01/VA21 no vacío, agrupadas por ESTADO ITEM.</div>
+      <div class="hint">Cuenta filas con <b>NRO. VA01/VA21</b> no vacío, agrupadas por estado.</div>
     </div>
   </div>
 
@@ -97,20 +97,25 @@
     <div class="tableWrap">
       <table id="tabla"></table>
     </div>
-    <div class="hint">Se muestran 30 filas (podés subirlo si querés).</div>
+    <div class="hint">Se muestran 30 filas.</div>
   </div>
 
 <script>
   // ============================
-  // CONFIG (AJUSTÁ SOLO SI CAMBIA)
+  // CONFIG
   // ============================
-  const csvUrl    = "CUMPLIMIENTO_2025.csv";  // <-- poné acá el nombre exacto del CSV subido
-  const DELIM     = ";";                      // tu CSV usa ;
-  const CLIENT_COL = "CLIENTE";               // según tu archivo
-  const NRO_COL    = "NRO. VA01/VA21";        // según tu archivo
-  const ESTADO_COL = "ESTADO ITEM";           // según tu archivo
-  const CUMPLIDO_VALUE = "CUMPLIDO";          // texto exacto del estado
+  const csvUrl = "CUMPLIMIENTO_2025.csv";   // <-- Cambiá si tu archivo se llama distinto
+  const DELIM  = ";";
 
+  // Columnas fijas
+  const NRO_COL   = "NRO. VA01/VA21";
+  const FECHA_COL = "FECHA ENTREGA ESPERADA";
+
+  // Columnas con fallback automático
+  const CLIENT_CANDIDATES = ["CLIENTE NRO.", "CLIENTE"];
+  const ESTADO_CANDIDATES = ["ESTADO ITEM", "ESTADOS"];
+
+  const CUMPLIDO_VALUE = "CUMPLIDO";
   const MAX_ROWS_TABLE = 30;
 
   // ============================
@@ -118,11 +123,15 @@
   // ============================
   let data = [];
   let headers = [];
-  let chartClientes = null;
+
+  let CLIENT_COL = null;
+  let ESTADO_COL = null;
+
+  let chartMes = null;
   let chartEstados = null;
 
   // ============================
-  // Parser CSV robusto (maneja comillas)
+  // CSV parser robusto (comillas)
   // ============================
   function parseDelimited(text, delimiter = ";") {
     const rows = [];
@@ -153,6 +162,27 @@
 
   const clean = v => (v ?? "").toString().trim();
 
+  function parseDateDMY(s) {
+    // dd/mm/aaaa
+    const v = clean(s);
+    if (!v) return null;
+    const parts = v.split("/");
+    if (parts.length !== 3) return null;
+
+    const dd = parseInt(parts[0], 10);
+    const mm = parseInt(parts[1], 10);
+    const yyyy = parseInt(parts[2], 10);
+
+    if (!yyyy || !mm || !dd) return null;
+    return new Date(yyyy, mm - 1, dd);
+  }
+
+  function monthKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`; // YYYY-MM
+  }
+
   function showError(msg) {
     document.getElementById("msg").innerHTML = `<div class="error">${msg}</div>`;
   }
@@ -171,38 +201,32 @@
   }
 
   // ============================
-  // Lógica KPI según tu regla:
-  // total pedidos = recuento de filas donde NRO_COL no está vacío
-  // cumplidos = esas filas donde ESTADO_COL = CUMPLIDO
+  // Reglas KPI
   // ============================
+  function rowsWithPedido(rows) {
+    return rows.filter(r => clean(r[NRO_COL]) !== "");
+  }
+
   function calcKPIs(rows) {
-  const base = rowsWithPedido(rows);
-  const total = base.length;
+    const base = rowsWithPedido(rows);
+    const total = base.length;
 
-  // Normalizo a MAYÚSCULAS para comparar
-  const noCumplidos = base.filter(r => {
-    const estado = clean(r[ESTADO_COL]).toUpperCase();
-    return estado !== CUMPLIDO_VALUE; // todo lo que NO es CUMPLIDO
-  }).length;
+    const cumplidos = base.filter(r => clean(r[ESTADO_COL]).toUpperCase() === CUMPLIDO_VALUE).length;
+    const pendientes = Math.max(total - cumplidos, 0);
+    const pct = total > 0 ? (cumplidos / total) : NaN;
 
-  const cumplidos = total - noCumplidos;
-
-  // Si querés mostrar "cumplimiento"
-  const pctCumplimiento = total > 0 ? (cumplidos / total) : NaN;
-
-  // Si querés mostrar "incumplimiento"
-  const pctNoCumplido = total > 0 ? (noCumplidos / total) : NaN;
-
-  return { total, cumplidos, noCumplidos, pctCumplimiento, pctNoCumplido, base };
-}
+    return { total, cumplidos, pendientes, pct, base };
+  }
 
   // ============================
   // UI: Select de clientes
   // ============================
   function renderClientesSelect() {
     const sel = document.getElementById("clienteSelect");
-    const clientes = [...new Set(data.map(r => clean(r[CLIENT_COL])).filter(Boolean))]
-      .sort((a,b) => a.localeCompare(b, 'es'));
+
+    const clientes = [...new Set(
+      data.map(r => clean(r[CLIENT_COL])).filter(Boolean)
+    )].sort((a,b) => a.localeCompare(b, 'es'));
 
     sel.querySelectorAll("option:not([value=''])").forEach(o => o.remove());
 
@@ -215,47 +239,75 @@
   }
 
   // ============================
-  // Gráfico: Cumplimiento por cliente (Top 10 por total pedidos)
+  // Gráfico 1: Cumplimiento por mes
   // ============================
-  function buildChartClientes(rows) {
-    // agrupar por cliente
-    const map = new Map(); // cliente -> {total, cumplidos}
+  function buildChartMes(rows) {
     const base = rowsWithPedido(rows);
 
-    for (const r of base) {
-      const c = clean(r[CLIENT_COL]) || "(Sin cliente)";
-      const estado = clean(r[ESTADO_COL]).toUpperCase();
+    // cliente -> mes -> {total, cumplidos}
+    const agg = new Map();
+    const allMonths = new Set();
 
-      if (!map.has(c)) map.set(c, { total: 0, cumplidos: 0 });
-      const obj = map.get(c);
-      obj.total += 1;
-      if (estado === CUMPLIDO_VALUE) obj.cumplidos += 1;
+    for (const r of base) {
+      const cliente = clean(r[CLIENT_COL]) || "(Sin cliente)";
+      const estado  = clean(r[ESTADO_COL]).toUpperCase();
+
+      const d = parseDateDMY(r[FECHA_COL]);
+      if (!d) continue;
+
+      const mk = monthKey(d);
+      allMonths.add(mk);
+
+      if (!agg.has(cliente)) agg.set(cliente, new Map());
+      const byMonth = agg.get(cliente);
+
+      if (!byMonth.has(mk)) byMonth.set(mk, { total: 0, cumplidos: 0 });
+      const cell = byMonth.get(mk);
+
+      cell.total += 1;
+      if (estado === CUMPLIDO_VALUE) cell.cumplidos += 1;
     }
 
-    // ordenar por total desc y tomar top 10
-    const arr = [...map.entries()].map(([cliente, v]) => ({
-      cliente,
-      total: v.total,
-      pct: v.total ? (v.cumplidos / v.total) : 0
-    }))
-    .sort((a,b) => b.total - a.total)
-    .slice(0, 10);
+    const months = [...allMonths].sort();
 
-    const labels = arr.map(x => x.cliente);
-    const values = arr.map(x => Math.round(x.pct * 1000) / 10); // % con 1 decimal (pero en número)
+    const selected = document.getElementById("clienteSelect").value;
+    let clientesToPlot = [];
 
-    const ctx = document.getElementById("chartClientes").getContext("2d");
-    if (chartClientes) chartClientes.destroy();
+    if (selected) {
+      clientesToPlot = [selected];
+    } else {
+      // top 5 por volumen total
+      const totals = [...agg.entries()].map(([c, m]) => {
+        let t = 0;
+        for (const v of m.values()) t += v.total;
+        return { cliente: c, total: t };
+      }).sort((a,b) => b.total - a.total).slice(0, 5);
 
-    chartClientes = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [{
-          label: "% Cumplimiento",
-          data: values
-        }]
-      },
+      clientesToPlot = totals.map(x => x.cliente);
+    }
+
+    const datasets = clientesToPlot.map(cliente => {
+      const byMonth = agg.get(cliente) || new Map();
+      const serie = months.map(mk => {
+        const v = byMonth.get(mk);
+        if (!v || v.total === 0) return null;
+        return Math.round((v.cumplidos / v.total) * 1000) / 10; // % con 1 decimal
+      });
+
+      return {
+        label: cliente,
+        data: serie,
+        spanGaps: false,
+        tension: 0.25
+      };
+    });
+
+    const ctx = document.getElementById("chartMes").getContext("2d");
+    if (chartMes) chartMes.destroy();
+
+    chartMes = new Chart(ctx, {
+      type: "line",
+      data: { labels: months, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -263,23 +315,19 @@
           y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } }
         },
         plugins: {
-          tooltip: {
-            callbacks: {
-              label: (ctx) => `${ctx.parsed.y}%`
-            }
-          },
-          legend: { display: false }
+          legend: { position: "bottom" },
+          tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y}%` } }
         }
       }
     });
   }
 
   // ============================
-  // Gráfico: Distribución de estados (filtrado)
+  // Gráfico 2: Distribución de estados
   // ============================
   function buildChartEstados(rows) {
     const base = rowsWithPedido(rows);
-    const map = new Map(); // estado -> count
+    const map = new Map();
 
     for (const r of base) {
       const e = clean(r[ESTADO_COL]) || "(Vacío)";
@@ -295,16 +343,11 @@
 
     chartEstados = new Chart(ctx, {
       type: "doughnut",
-      data: {
-        labels,
-        datasets: [{ data: values }]
-      },
+      data: { labels, datasets: [{ data: values }] },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { position: "bottom" }
-        }
+        plugins: { legend: { position: "bottom" } }
       }
     });
   }
@@ -319,11 +362,10 @@
     const thead = document.createElement("thead");
     const trh = document.createElement("tr");
 
-    // mostramos columnas clave primero si existen
-    const preferred = [CLIENT_COL, NRO_COL, ESTADO_COL, "PRIORIDAD", "CLASE DE DOC", "REF.CLIENTE", "DOC. REF"];
+    const preferred = [CLIENT_COL, NRO_COL, ESTADO_COL, FECHA_COL, "PRIORIDAD", "CLASE DE DOC", "REF.CLIENTE", "DOC. REF"];
     const cols = [
       ...preferred.filter(c => headers.includes(c)),
-      ...headers.filter(h => !preferred.includes(h)).slice(0, 10) // + algunas extra
+      ...headers.filter(h => !preferred.includes(h)).slice(0, 10)
     ];
 
     cols.forEach(h => {
@@ -348,7 +390,7 @@
   }
 
   // ============================
-  // Aplicar filtro y refrescar todo
+  // Refrescar todo con filtro
   // ============================
   function applyFilter() {
     const selCliente = document.getElementById("clienteSelect").value;
@@ -364,7 +406,7 @@
     setText("kpiPendientes", fmtInt(k.pendientes));
     setText("kpiPct", fmtPct(k.pct));
 
-    buildChartClientes(filtered);
+    buildChartMes(filtered);
     buildChartEstados(filtered);
     renderTable(filtered);
   }
@@ -384,27 +426,41 @@
       headers = matrix[0].map(clean);
       const body = matrix.slice(1);
 
+      // detectar columnas cliente/estado
+      CLIENT_COL = CLIENT_CANDIDATES.find(c => headers.includes(c)) || null;
+      ESTADO_COL = ESTADO_CANDIDATES.find(c => headers.includes(c)) || null;
+
+      // Validaciones mínimas
+      const missing = [];
+      if (!headers.includes(NRO_COL)) missing.push(NRO_COL);
+      if (!headers.includes(FECHA_COL)) missing.push(FECHA_COL);
+      if (!CLIENT_COL) missing.push("CLIENTE (se probó: " + CLIENT_CANDIDATES.join(" / ") + ")");
+      if (!ESTADO_COL) missing.push("ESTADO (se probó: " + ESTADO_CANDIDATES.join(" / ") + ")");
+
+      if (missing.length) {
+        showError("No encuentro estas columnas en el CSV: <b>" + missing.join(", ") + "</b>.<br><br>" +
+                  "Revisá el encabezado del CSV o avisame los nombres exactos.");
+        return;
+      }
+
+      // armar objetos
       data = body.map(cols => {
         const obj = {};
         headers.forEach((h, i) => obj[h] = clean(cols[i]));
         return obj;
       });
 
-      // Validaciones
-      const required = [CLIENT_COL, NRO_COL, ESTADO_COL];
-      const missing = required.filter(c => !headers.includes(c));
-      if (missing.length) {
-        showError("No encuentro estas columnas en el CSV: <b>" + missing.join(", ") + "</b>. " +
-                  "Revisá el encabezado o ajustá CLIENT_COL / NRO_COL / ESTADO_COL en el index.html.");
-        return;
-      }
+      // textos UI
+      document.getElementById("clienteHint").textContent = `Filtro usando columna: ${CLIENT_COL}`;
+      document.getElementById("kpiTotalSub").innerHTML = `Filas con <b>${NRO_COL}</b> no vacío`;
+      document.getElementById("kpiCumplidosSub").innerHTML = `<b>${ESTADO_COL}</b> = CUMPLIDO`;
 
       renderClientesSelect();
       applyFilter();
       document.getElementById("clienteSelect").addEventListener("change", applyFilter);
     })
     .catch(err => {
-      showError("Error cargando el CSV. Revisá el nombre del archivo y que esté en el repo.");
+      showError("Error cargando el CSV. Revisá el nombre del archivo (csvUrl) y que esté en el repo.");
       console.error(err);
     });
 </script>
