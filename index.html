@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dashboard Cumplimiento</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background:#fafafa; }
+    h2 { margin: 0 0 14px 0; }
+
+    .row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; }
+    .box { background:#fff; border:1px solid #e3e3e3; border-radius:12px; padding:14px; }
+    .filter { min-width: 320px; }
+    label { font-size: 12px; color:#444; }
+    select { width:100%; padding:8px 10px; border-radius:10px; border:1px solid #ddd; }
+
+    .kpis { display:flex; gap:12px; flex-wrap:wrap; }
+    .kpi { min-width: 210px; }
+    .kpi .title { font-size:12px; color:#666; }
+    .kpi .value { font-size:28px; font-weight:800; margin-top:6px; }
+    .kpi .sub { font-size:12px; color:#666; margin-top:4px; }
+
+    .grid { display:grid; grid-template-columns: 1.2fr 1fr; gap:16px; margin-top:16px; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+    .chartWrap { height: 360px; }
+    .tableWrap { max-height: 55vh; overflow:auto; }
+    table { border-collapse: collapse; width:100%; background:#fff; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; text-align:left; }
+    th { background:#f2f2f2; position: sticky; top: 0; z-index: 1; }
+
+    .hint { font-size:12px; color:#666; margin-top:8px; }
+    .error { margin-top: 14px; padding: 10px 12px; background: #fff3f3; border: 1px solid #ffcccc; border-radius: 10px; color:#a40000; }
+  </style>
+</head>
+
+<body>
+  <h2>Cumplimiento de pedidos</h2>
+
+  <div class="row">
+    <div class="box filter">
+      <label for="clienteSelect"><b>Cliente</b></label>
+      <select id="clienteSelect">
+        <option value="">Todos</option>
+      </select>
+      <div class="hint">Filtra KPIs, gráficos y tabla por cliente.</div>
+    </div>
+
+    <div class="kpis">
+      <div class="box kpi">
+        <div class="title">Pedidos totales</div>
+        <div class="value" id="kpiTotal">-</div>
+        <div class="sub">Filas con <b>NRO. VA01/VA21</b> no vacío</div>
+      </div>
+
+      <div class="box kpi">
+        <div class="title">Pedidos cumplidos</div>
+        <div class="value" id="kpiCumplidos">-</div>
+        <div class="sub"><b>ESTADO ITEM</b> = CUMPLIDO</div>
+      </div>
+
+      <div class="box kpi">
+        <div class="title">Pendientes</div>
+        <div class="value" id="kpiPendientes">-</div>
+        <div class="sub">Totales - Cumplidos</div>
+      </div>
+
+      <div class="box kpi">
+        <div class="title">% Cumplimiento</div>
+        <div class="value" id="kpiPct">-</div>
+        <div class="sub">Cumplidos / Totales</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="grid">
+    <div class="box">
+      <div style="font-weight:700; margin-bottom:8px;">Cumplimiento por cliente (Top 10 por pedidos)</div>
+      <div class="chartWrap"><canvas id="chartClientes"></canvas></div>
+      <div class="hint">El % se calcula como (Cumplidos / Totales) por cliente.</div>
+    </div>
+
+    <div class="box">
+      <div style="font-weight:700; margin-bottom:8px;">Distribución de estados (filtrado)</div>
+      <div class="chartWrap"><canvas id="chartEstados"></canvas></div>
+      <div class="hint">Cuenta filas con NRO. VA01/VA21 no vacío, agrupadas por ESTADO ITEM.</div>
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:16px;">
+    <div style="font-weight:700; margin-bottom:8px;">Detalle (primeras filas)</div>
+    <div class="tableWrap">
+      <table id="tabla"></table>
+    </div>
+    <div class="hint">Se muestran 30 filas (podés subirlo si querés).</div>
+  </div>
+
+<script>
+  // ============================
+  // CONFIG (AJUSTÁ SOLO SI CAMBIA)
+  // ============================
+  const csvUrl    = "CUMPLIMIENTO_2025.csv";  // <-- poné acá el nombre exacto del CSV subido
+  const DELIM     = ";";                      // tu CSV usa ;
+  const CLIENT_COL = "CLIENTE";               // según tu archivo
+  const NRO_COL    = "NRO. VA01/VA21";        // según tu archivo
+  const ESTADO_COL = "ESTADO ITEM";           // según tu archivo
+  const CUMPLIDO_VALUE = "CUMPLIDO";          // texto exacto del estado
+
+  const MAX_ROWS_TABLE = 30;
+
+  // ============================
+  // ESTADO
+  // ============================
+  let data = [];
+  let headers = [];
+  let chartClientes = null;
+  let chartEstados = null;
+
+  // ============================
+  // Parser CSV robusto (maneja comillas)
+  // ============================
+  function parseDelimited(text, delimiter = ";") {
+    const rows = [];
+    let row = [];
+    let cur = "";
+    let inQuotes = false;
+
+    text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+
+      if (ch === '"') {
+        if (inQuotes && text[i + 1] === '"') { cur += '"'; i++; }
+        else { inQuotes = !inQuotes; }
+      } else if (ch === delimiter && !inQuotes) {
+        row.push(cur); cur = "";
+      } else if (ch === "\n" && !inQuotes) {
+        row.push(cur); rows.push(row);
+        row = []; cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    if (cur.length > 0 || row.length > 0) { row.push(cur); rows.push(row); }
+    return rows;
+  }
+
+  const clean = v => (v ?? "").toString().trim();
+
+  function showError(msg) {
+    document.getElementById("msg").innerHTML = `<div class="error">${msg}</div>`;
+  }
+
+  function setText(id, value) {
+    document.getElementById(id).textContent = value;
+  }
+
+  function fmtInt(n) {
+    return Number(n).toLocaleString("es-AR");
+  }
+
+  function fmtPct(x) {
+    if (!isFinite(x)) return "-";
+    return (x * 100).toFixed(1).replace(".", ",") + "%";
+  }
+
+  // ============================
+  // Lógica KPI según tu regla:
+  // total pedidos = recuento de filas donde NRO_COL no está vacío
+  // cumplidos = esas filas donde ESTADO_COL = CUMPLIDO
+  // ============================
+  function rowsWithPedido(rows) {
+    return rows.filter(r => clean(r[NRO_COL]) !== "");
+  }
+
+  function calcKPIs(rows) {
+    const base = rowsWithPedido(rows);
+    const total = base.length;
+
+    const cumplidos = base.filter(r => clean(r[ESTADO_COL]).toUpperCase() === CUMPLIDO_VALUE).length;
+    const pendientes = Math.max(total - cumplidos, 0);
+    const pct = total > 0 ? (cumplidos / total) : NaN;
+
+    return { total, cumplidos, pendientes, pct, base };
+  }
+
+  // ============================
+  // UI: Select de clientes
+  // ============================
+  function renderClientesSelect() {
+    const sel = document.getElementById("clienteSelect");
+    const clientes = [...new Set(data.map(r => clean(r[CLIENT_COL])).filter(Boolean))]
+      .sort((a,b) => a.localeCompare(b, 'es'));
+
+    sel.querySelectorAll("option:not([value=''])").forEach(o => o.remove());
+
+    clientes.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c;
+      opt.textContent = c;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ============================
+  // Gráfico: Cumplimiento por cliente (Top 10 por total pedidos)
+  // ============================
+  function buildChartClientes(rows) {
+    // agrupar por cliente
+    const map = new Map(); // cliente -> {total, cumplidos}
+    const base = rowsWithPedido(rows);
+
+    for (const r of base) {
+      const c = clean(r[CLIENT_COL]) || "(Sin cliente)";
+      const estado = clean(r[ESTADO_COL]).toUpperCase();
+
+      if (!map.has(c)) map.set(c, { total: 0, cumplidos: 0 });
+      const obj = map.get(c);
+      obj.total += 1;
+      if (estado === CUMPLIDO_VALUE) obj.cumplidos += 1;
+    }
+
+    // ordenar por total desc y tomar top 10
+    const arr = [...map.entries()].map(([cliente, v]) => ({
+      cliente,
+      total: v.total,
+      pct: v.total ? (v.cumplidos / v.total) : 0
+    }))
+    .sort((a,b) => b.total - a.total)
+    .slice(0, 10);
+
+    const labels = arr.map(x => x.cliente);
+    const values = arr.map(x => Math.round(x.pct * 1000) / 10); // % con 1 decimal (pero en número)
+
+    const ctx = document.getElementById("chartClientes").getContext("2d");
+    if (chartClientes) chartClientes.destroy();
+
+    chartClientes = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          label: "% Cumplimiento",
+          data: values
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } }
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.parsed.y}%`
+            }
+          },
+          legend: { display: false }
+        }
+      }
+    });
+  }
+
+  // ============================
+  // Gráfico: Distribución de estados (filtrado)
+  // ============================
+  function buildChartEstados(rows) {
+    const base = rowsWithPedido(rows);
+    const map = new Map(); // estado -> count
+
+    for (const r of base) {
+      const e = clean(r[ESTADO_COL]) || "(Vacío)";
+      map.set(e, (map.get(e) || 0) + 1);
+    }
+
+    const arr = [...map.entries()].sort((a,b) => b[1] - a[1]);
+    const labels = arr.map(x => x[0]);
+    const values = arr.map(x => x[1]);
+
+    const ctx = document.getElementById("chartEstados").getContext("2d");
+    if (chartEstados) chartEstados.destroy();
+
+    chartEstados = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [{ data: values }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: "bottom" }
+        }
+      }
+    });
+  }
+
+  // ============================
+  // Tabla
+  // ============================
+  function renderTable(rows) {
+    const table = document.getElementById("tabla");
+    table.innerHTML = "";
+
+    const thead = document.createElement("thead");
+    const trh = document.createElement("tr");
+
+    // mostramos columnas clave primero si existen
+    const preferred = [CLIENT_COL, NRO_COL, ESTADO_COL, "PRIORIDAD", "CLASE DE DOC", "REF.CLIENTE", "DOC. REF"];
+    const cols = [
+      ...preferred.filter(c => headers.includes(c)),
+      ...headers.filter(h => !preferred.includes(h)).slice(0, 10) // + algunas extra
+    ];
+
+    cols.forEach(h => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    rows.slice(0, MAX_ROWS_TABLE).forEach(r => {
+      const tr = document.createElement("tr");
+      cols.forEach(h => {
+        const td = document.createElement("td");
+        td.textContent = r[h] ?? "";
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+  }
+
+  // ============================
+  // Aplicar filtro y refrescar todo
+  // ============================
+  function applyFilter() {
+    const selCliente = document.getElementById("clienteSelect").value;
+
+    const filtered = selCliente
+      ? data.filter(r => clean(r[CLIENT_COL]) === selCliente)
+      : data;
+
+    const k = calcKPIs(filtered);
+
+    setText("kpiTotal", fmtInt(k.total));
+    setText("kpiCumplidos", fmtInt(k.cumplidos));
+    setText("kpiPendientes", fmtInt(k.pendientes));
+    setText("kpiPct", fmtPct(k.pct));
+
+    buildChartClientes(filtered);
+    buildChartEstados(filtered);
+    renderTable(filtered);
+  }
+
+  // ============================
+  // Carga inicial
+  // ============================
+  fetch(csvUrl)
+    .then(r => r.text())
+    .then(text => {
+      const matrix = parseDelimited(text, DELIM);
+      if (!matrix.length || matrix.length < 2) {
+        showError("El CSV parece vacío o no tiene filas suficientes.");
+        return;
+      }
+
+      headers = matrix[0].map(clean);
+      const body = matrix.slice(1);
+
+      data = body.map(cols => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = clean(cols[i]));
+        return obj;
+      });
+
+      // Validaciones
+      const required = [CLIENT_COL, NRO_COL, ESTADO_COL];
+      const missing = required.filter(c => !headers.includes(c));
+      if (missing.length) {
+        showError("No encuentro estas columnas en el CSV: <b>" + missing.join(", ") + "</b>. " +
+                  "Revisá el encabezado o ajustá CLIENT_COL / NRO_COL / ESTADO_COL en el index.html.");
+        return;
+      }
+
+      renderClientesSelect();
+      applyFilter();
+      document.getElementById("clienteSelect").addEventListener("change", applyFilter);
+    })
+    .catch(err => {
+      showError("Error cargando el CSV. Revisá el nombre del archivo y que esté en el repo.");
+      console.error(err);
+    });
+</script>
+
+</body>
+</html>
