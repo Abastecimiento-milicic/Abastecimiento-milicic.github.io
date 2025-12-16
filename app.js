@@ -18,6 +18,7 @@ let data = [];
 let headers = [];
 let CLIENT_COL = null;
 let chartMes = null;
+let chartTendencia = null;
 
 /* ============================
    HELPERS
@@ -292,6 +293,76 @@ function buildChartMes(rows) {
 }
 
 /* ============================
+   GRÁFICO TENDENCIA DE CUMPLIMIENTO 
+============================ */
+function buildChartTendencia(rows) {
+  const agg = new Map();
+  const monthsSet = new Set();
+
+  for (const r of rows) {
+    const d = parseDateDMY(r[FECHA_COL]);
+    if (!d) continue;
+
+    const mk = monthKey(d);
+    monthsSet.add(mk);
+
+    if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0 });
+    const c = agg.get(mk);
+
+    c.at += toNumber(r[AT_COL]);
+    c.ft += toNumber(r[FT_COL]);
+    c.no += toNumber(r[NO_COL]);
+  }
+
+  const months = [...monthsSet].sort();
+  const qAT = months.map(m => agg.get(m)?.at ?? 0);
+  const qFT = months.map(m => agg.get(m)?.ft ?? 0);
+  const qNO = months.map(m => agg.get(m)?.no ?? 0);
+
+  const pAT = qAT.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t*100):0; });
+  const pFT = qFT.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t*100):0; });
+  const pNO = qNO.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t*100):0; });
+
+  const canvas = document.getElementById("chartTendencia");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  if (chartTendencia) chartTendencia.destroy();
+
+  chartTendencia = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: months,
+      datasets: [
+        { label: "A Tiempo %", data: pAT, tension: 0.35, pointRadius: 3 },
+        { label: "Fuera Tiempo %", data: pFT, tension: 0.35, pointRadius: 3 },
+        { label: "No Entregados %", data: pNO, tension: 0.35, pointRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { callback: (v) => v + "%" }
+        }
+      },
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: {
+          callbacks: {
+            label: (c) => `${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%`
+          }
+        },
+        datalabels: { display: false } // sin etiquetas para que no se ensucie
+      }
+    }
+  });
+}
+
+/* ============================
    UI
 ============================ */
 function renderClientes() {
@@ -316,6 +387,7 @@ function applyAll() {
   updateKPIsGeneral(rows);
   updateKPIsMonthly(rows, months);
   buildChartMes(rows);
+  buildChartTendencia(rows);
 }
 
 /* ============================
@@ -362,3 +434,4 @@ window.addEventListener("DOMContentLoaded", () => {
       console.error(err);
     });
 });
+
