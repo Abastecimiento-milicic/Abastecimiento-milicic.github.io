@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Dashboard Entregas</title>
 
+  <!-- Librerías -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
@@ -37,12 +38,12 @@
 
 <body>
 
-<h2>CUMPLIMIENTO MENSUAL ACUMULADO</h2>
+<h2>Entregas por mes (AT / FT / No entregados)</h2>
 
 <!-- Filtros -->
 <div class="row">
   <div class="box filter">
-    <label for="clienteSelect"><b>CLIENTE</b></label>
+    <label for="clienteSelect"><b>Cliente</b></label>
     <select id="clienteSelect">
       <option value="">Todos</option>
     </select>
@@ -88,19 +89,19 @@
 <!-- KPIs mensuales + variación -->
 <div class="row">
   <div class="box kpi">
-    <div class="title">% ENTREGADOS AT (mes)</div>
+    <div class="title">% AT (mes)</div>
     <div class="value" id="kpiATmes">-</div>
     <div class="sub" id="kpiATmesSub">-</div>
   </div>
 
   <div class="box kpi">
-    <div class="title">% ENTREGADOS FT (mes)</div>
+    <div class="title">% FT (mes)</div>
     <div class="value" id="kpiFTmes">-</div>
     <div class="sub" id="kpiFTmesSub">-</div>
   </div>
 
   <div class="box kpi">
-    <div class="title">% NO ENTREGADOS (mes)</div>
+    <div class="title">% NO (mes)</div>
     <div class="value" id="kpiNOmes">-</div>
     <div class="sub" id="kpiNOmesSub">-</div>
   </div>
@@ -112,24 +113,25 @@
   </div>
 </div>
 
-<!-- Gráfico -->
+<!-- Gráfico 1 -->
 <div class="box chartWrap">
   <div style="font-weight:700; margin-bottom:8px;">AT / FT / No entregados por mes (100% apilado)</div>
   <canvas id="chartMes"></canvas>
-  <div class="hint">
-    Etiqueta: <b>cantidad (xx.x%)</b>. Mes = <b>FECHA ENTREGA ESPERADA</b> (dd/mm/aaaa).
-  </div>
+  <div class="hint">Etiqueta: <b>cantidad (xx.x%)</b></div>
 </div>
 
-<div class="box chartWrap" style="margin-top:16px;">
-  <div style="font-weight:700; margin-bottom:8px;">Tendencia de cumplimiento (líneas % por mes)</div>
+<!-- Gráfico 2 -->
+<div class="box chartWrap">
+  <div style="font-weight:700; margin-bottom:8px;">Tendencia (línea recta + etiquetas %)</div>
   <canvas id="chartTendencia"></canvas>
-  <div class="hint">Series: A Tiempo %, Fuera Tiempo %, No Entregados % (por mes).</div>
+  <div class="hint">Series: AT %, FT %, NO % (por mes)</div>
 </div>
 
 <!-- Tu JS -->
 <script src="app.js"></script>
 </body>
 </html>
+
+
 
 
