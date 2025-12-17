@@ -12,7 +12,7 @@ const FT_COL = "ENTREGADOS FT";
 const NO_COL = "NO ENTREGADOS";
 
 /* ============================
-   COLORES (DEBEN COINCIDIR con CSS)
+   COLORES (igual a CSS)
 ============================ */
 const COLORS = {
   blue:  "#1d4ed8",
@@ -43,7 +43,6 @@ function toNumber(v) {
   let x = clean(v);
   if (!x) return 0;
   x = x.replace(/\s/g, "");
-  // soporta "1.234,56" y "1234,56"
   if (x.includes(",")) x = x.replace(/\./g, "").replace(",", ".");
   const n = Number(x);
   return Number.isFinite(n) ? n : 0;
@@ -56,18 +55,6 @@ function fmtInt(n) {
 function fmtPct01(x) {
   if (!isFinite(x)) return "-";
   return (x * 100).toFixed(1).replace(".", ",") + "%";
-}
-
-function fmtPct100(x) {
-  if (!isFinite(x)) return "-";
-  return x.toFixed(1).replace(".", ",") + "%";
-}
-
-function fmtDelta01(d) {
-  if (!isFinite(d)) return "Sin mes anterior";
-  const up = d >= 0;
-  const arrow = up ? "▲" : "▼";
-  return `${arrow} ${(Math.abs(d) * 100).toFixed(1).replace(".", ",")}% vs mes anterior`;
 }
 
 function safeFilePart(s) {
@@ -258,6 +245,19 @@ function calcMonthTotals(rows, month) {
 }
 
 /* ============================
+   DELTAS (con tolerancia)
+============================ */
+function deltaInfo(curr, prev) {
+  if (!isFinite(curr) || !isFinite(prev)) return { text: "Sin mes anterior", diff: NaN };
+  const diff = curr - prev;
+  const eps = 0.000001;
+  if (Math.abs(diff) < eps) return { text: "• 0,0% vs mes anterior", diff: 0 };
+  const arrow = diff > 0 ? "▲" : "▼";
+  const txt = `${arrow} ${(Math.abs(diff) * 100).toFixed(1).replace(".", ",")}% vs mes anterior`;
+  return { text: txt, diff };
+}
+
+/* ============================
    KPIs UI
 ============================ */
 function updateKPIsGeneral(rows) {
@@ -292,16 +292,54 @@ function updateKPIsMonthly(rows, months) {
   document.getElementById("kpiTotalMes").textContent = fmtInt(cur.total);
 
   document.getElementById("kpiATmes").textContent = fmtPct01(cur.pctAT);
-  document.getElementById("kpiATmesSub").textContent =
-    `Cant: ${fmtInt(cur.at)} · ${prev ? fmtDelta01(cur.pctAT - prev.pctAT) : "Sin mes anterior"}`;
-
   document.getElementById("kpiFTmes").textContent = fmtPct01(cur.pctFT);
-  document.getElementById("kpiFTmesSub").textContent =
-    `Cant: ${fmtInt(cur.ft)} · ${prev ? fmtDelta01(cur.pctFT - prev.pctFT) : "Sin mes anterior"}`;
-
   document.getElementById("kpiNOmes").textContent = fmtPct01(cur.pctNO);
-  document.getElementById("kpiNOmesSub").textContent =
-    `Cant: ${fmtInt(cur.no)} · ${prev ? fmtDelta01(cur.pctNO - prev.pctNO) : "Sin mes anterior"}`;
+
+  const atSub = document.getElementById("kpiATmesSub");
+  const ftSub = document.getElementById("kpiFTmesSub");
+  const noSub = document.getElementById("kpiNOmesSub");
+
+  function setDelta(el, text, cls) {
+    if (!el) return;
+    el.classList.remove("delta-good", "delta-bad", "delta-neutral");
+    if (cls) el.classList.add(cls);
+    el.textContent = text;
+  }
+
+  if (!prev) {
+    setDelta(atSub, `Cant: ${fmtInt(cur.at)} · Sin mes anterior`, "");
+    setDelta(ftSub, `Cant: ${fmtInt(cur.ft)} · Sin mes anterior`, "");
+    setDelta(noSub, `Cant: ${fmtInt(cur.no)} · Sin mes anterior`, "");
+    return;
+  }
+
+  const dAT = deltaInfo(cur.pctAT, prev.pctAT);
+  const dFT = deltaInfo(cur.pctFT, prev.pctFT);
+  const dNO = deltaInfo(cur.pctNO, prev.pctNO);
+
+  /*
+    REGLAS:
+    AT: baja = rojo, sube o se mantiene = verde
+    FT: sube o se mantiene = rojo, baja = verde
+    NO: sube = rojo, baja o se mantiene = verde
+  */
+  let clsAT = "delta-neutral";
+  if (dAT.diff > 0) clsAT = "delta-good";
+  else if (dAT.diff < 0) clsAT = "delta-bad";
+  else clsAT = "delta-good";
+
+  let clsFT = "delta-neutral";
+  if (dFT.diff > 0) clsFT = "delta-bad";
+  else if (dFT.diff < 0) clsFT = "delta-good";
+  else clsFT = "delta-bad"; // se mantiene = rojo
+
+  let clsNO = "delta-neutral";
+  if (dNO.diff > 0) clsNO = "delta-bad";
+  else clsNO = "delta-good"; // baja o se mantiene = verde
+
+  setDelta(atSub, `Cant: ${fmtInt(cur.at)} · ${dAT.text}`, clsAT);
+  setDelta(ftSub, `Cant: ${fmtInt(cur.ft)} · ${dFT.text}`, clsFT);
+  setDelta(noSub, `Cant: ${fmtInt(cur.no)} · ${dNO.text}`, clsNO);
 }
 
 /* ============================
@@ -312,7 +350,6 @@ function applyChartDefaults() {
   Chart.defaults.font.family = '"Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif';
   Chart.defaults.font.weight = "700";
 
-  // Tooltips “limpios”
   Chart.defaults.plugins.tooltip.backgroundColor = "rgba(255,255,255,0.96)";
   Chart.defaults.plugins.tooltip.titleColor = COLORS.text;
   Chart.defaults.plugins.tooltip.bodyColor = COLORS.text;
@@ -321,7 +358,6 @@ function applyChartDefaults() {
   Chart.defaults.plugins.tooltip.displayColors = true;
   Chart.defaults.plugins.tooltip.padding = 10;
 
-  // Hover “Power BI style”
   Chart.defaults.interaction.mode = "index";
   Chart.defaults.interaction.intersect = false;
 }
@@ -377,42 +413,18 @@ function buildChartMes(rows) {
     data: {
       labels: months,
       datasets: [
-        {
-          label: "Entregados AT",
-          data: pAT,
-          _q: qAT,
-          stack: "s",
-          backgroundColor: COLORS.green
-        },
-        {
-          label: "Entregados FT",
-          data: pFT,
-          _q: qFT,
-          stack: "s",
-          backgroundColor: COLORS.amber
-        },
-        {
-          label: "No entregados",
-          data: pNO,
-          _q: qNO,
-          stack: "s",
-          backgroundColor: COLORS.red
-        },
+        { label: "Entregados AT", data: pAT, _q: qAT, stack: "s", backgroundColor: COLORS.green },
+        { label: "Entregados FT", data: pFT, _q: qFT, stack: "s", backgroundColor: COLORS.amber },
+        { label: "No entregados", data: pNO, _q: qNO, stack: "s", backgroundColor: COLORS.red  },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: {
-          stacked: true,
-          grid: { color: "transparent" },
-          ticks: { color: COLORS.muted }
-        },
+        x: { stacked: true, grid: { color: "transparent" }, ticks: { color: COLORS.muted } },
         y: {
-          stacked: true,
-          beginAtZero: true,
-          max: 100,
+          stacked: true, beginAtZero: true, max: 100,
           grid: { color: COLORS.grid },
           ticks: { callback: (v) => v + "%", color: COLORS.muted }
         },
@@ -447,7 +459,7 @@ function buildChartMes(rows) {
 }
 
 /* ============================
-   CHART 2: Trend lines (straight + labels)
+   CHART 2: Trend lines
 ============================ */
 function buildChartTendencia(rows) {
   const agg = new Map();
@@ -470,18 +482,15 @@ function buildChartTendencia(rows) {
 
   const months = [...monthsSet].sort();
   const pAT = months.map((m) => {
-    const c = agg.get(m);
-    const t = c.at + c.ft + c.no;
+    const c = agg.get(m); const t = c.at + c.ft + c.no;
     return t ? (c.at / t) * 100 : 0;
   });
   const pFT = months.map((m) => {
-    const c = agg.get(m);
-    const t = c.at + c.ft + c.no;
+    const c = agg.get(m); const t = c.at + c.ft + c.no;
     return t ? (c.ft / t) * 100 : 0;
   });
   const pNO = months.map((m) => {
-    const c = agg.get(m);
-    const t = c.at + c.ft + c.no;
+    const c = agg.get(m); const t = c.at + c.ft + c.no;
     return t ? (c.no / t) * 100 : 0;
   });
 
@@ -496,60 +505,28 @@ function buildChartTendencia(rows) {
     data: {
       labels: months,
       datasets: [
-        {
-          label: "A Tiempo %",
-          data: pAT,
-          borderColor: COLORS.green,
-          backgroundColor: COLORS.green,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2,
-        },
-        {
-          label: "Fuera Tiempo %",
-          data: pFT,
-          borderColor: COLORS.amber,
-          backgroundColor: COLORS.amber,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2,
-        },
-        {
-          label: "No Entregados %",
-          data: pNO,
-          borderColor: COLORS.red,
-          backgroundColor: COLORS.red,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2,
-        },
+        { label: "A Tiempo %", data: pAT, borderColor: COLORS.green, backgroundColor: COLORS.green,
+          tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
+        { label: "Fuera Tiempo %", data: pFT, borderColor: COLORS.amber, backgroundColor: COLORS.amber,
+          tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
+        { label: "No Entregados %", data: pNO, borderColor: COLORS.red, backgroundColor: COLORS.red,
+          tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: {
-          grid: { color: "transparent" },
-          ticks: { color: COLORS.muted }
-        },
+        x: { grid: { color: "transparent" }, ticks: { color: COLORS.muted } },
         y: {
-          beginAtZero: true,
-          max: 100,
+          beginAtZero: true, max: 100,
           grid: { color: COLORS.grid },
           ticks: { callback: (v) => v + "%", color: COLORS.muted }
         },
       },
       plugins: {
         legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%`,
-          },
-        },
+        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%` } },
         datalabels: {
           align: "top",
           anchor: "end",
@@ -651,12 +628,6 @@ window.addEventListener("DOMContentLoaded", () => {
       const hint = document.getElementById("clienteHint");
       if (hint) hint.textContent = `Columna cliente: ${CLIENT_COL}`;
 
-      const monthsAll = [...new Set(data.map(getMonthKeyFromRow).filter(Boolean))].sort();
-      if (!monthsAll.length) {
-        showError(`No pude leer meses desde "${FECHA_COL}". Verificá formato (ej: 15/11/2025).`);
-        return;
-      }
-
       renderClientes();
       applyAll();
 
@@ -693,6 +664,3 @@ window.addEventListener("DOMContentLoaded", () => {
       showError("Error cargando CSV. Revisá nombre del archivo y que esté en la raíz del repo.");
     });
 });
-
-
-
