@@ -5,14 +5,27 @@ const csvUrl = "CUMPLIMIENTO_2025.csv";
 const DELIM = ";";
 
 const FECHA_COL = "FECHA ENTREGA ESPERADA";
-const CLIENT_CANDIDATES = ["CLIENTE NRO.", "CLIENTE"];
+const CLIENT_CANDIDATES = ["CLIENTE / OBRA", "CLIENTE NRO.", "CLIENTE"];
 
 const AT_COL = "ENTREGADOS AT";
 const FT_COL = "ENTREGADOS FT";
 const NO_COL = "NO ENTREGADOS";
 
 /* ============================
-   ESTADO GLOBAL
+   COLORES (DEBEN COINCIDIR con CSS)
+============================ */
+const COLORS = {
+  blue:  "#1d4ed8",
+  green: "#16a34a",
+  amber: "#f59e0b",
+  red:   "#ef4444",
+  grid:  "rgba(15, 23, 42, 0.08)",
+  text:  "#0b1220",
+  muted: "#526172",
+};
+
+/* ============================
+   GLOBAL
 ============================ */
 let data = [];
 let headers = [];
@@ -30,32 +43,14 @@ function toNumber(v) {
   let x = clean(v);
   if (!x) return 0;
   x = x.replace(/\s/g, "");
+  // soporta "1.234,56" y "1234,56"
   if (x.includes(",")) x = x.replace(/\./g, "").replace(",", ".");
   const n = Number(x);
   return Number.isFinite(n) ? n : 0;
 }
 
-function parseDateDMY(s) {
-  const p = clean(s).split("/");
-  if (p.length !== 3) return null;
-  const d = parseInt(p[0], 10);
-  const m = parseInt(p[1], 10);
-  const y = parseInt(p[2], 10);
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d);
-}
-
-function monthKey(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function getMonthKeyFromRow(r) {
-  const d = parseDateDMY(r[FECHA_COL]);
-  return d ? monthKey(d) : null;
-}
-
 function fmtInt(n) {
-  return Number(n).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+  return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
 }
 
 function fmtPct01(x) {
@@ -63,15 +58,16 @@ function fmtPct01(x) {
   return (x * 100).toFixed(1).replace(".", ",") + "%";
 }
 
-function fmtDelta01(d) {
-  if (!isFinite(d)) return "Sin mes anterior";
-  const arrow = d >= 0 ? "▲" : "▼";
-  return `${arrow} ${(Math.abs(d) * 100).toFixed(1).replace(".", ",")}% vs mes anterior`;
+function fmtPct100(x) {
+  if (!isFinite(x)) return "-";
+  return x.toFixed(1).replace(".", ",") + "%";
 }
 
-function showError(msg) {
-  const el = document.getElementById("msg");
-  if (el) el.innerHTML = `<div class="error">${msg}</div>`;
+function fmtDelta01(d) {
+  if (!isFinite(d)) return "Sin mes anterior";
+  const up = d >= 0;
+  const arrow = up ? "▲" : "▼";
+  return `${arrow} ${(Math.abs(d) * 100).toFixed(1).replace(".", ",")}% vs mes anterior`;
 }
 
 function safeFilePart(s) {
@@ -79,38 +75,57 @@ function safeFilePart(s) {
 }
 
 /* ============================
-   EXPORT (CSV para Excel)
+   DATE PARSING
+   - dd/mm/yyyy (principal)
+   - dd-mm-yyyy
+   - yyyy-mm-dd
 ============================ */
-function escapeCSV(v) {
-  const s = (v ?? "").toString();
-  if (/[;"\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
+function parseDateAny(s) {
+  const t = clean(s);
+  if (!t) return null;
+
+  // dd/mm/yyyy or dd-mm-yyyy
+  let m = t.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) {
+    const d = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10);
+    const y = parseInt(m[3], 10);
+    if (!y || !mo || !d) return null;
+    return new Date(y, mo - 1, d);
+  }
+
+  // yyyy-mm-dd
+  m = t.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (m) {
+    const y = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10);
+    const d = parseInt(m[3], 10);
+    if (!y || !mo || !d) return null;
+    return new Date(y, mo - 1, d);
+  }
+
+  return null;
 }
 
-function downloadCSV(filename, rows, cols) {
-  const header = cols.map(escapeCSV).join(";");
-  const lines = rows.map(r => cols.map(c => escapeCSV(r[c])).join(";"));
-  const csv = [header, ...lines].join("\r\n");
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-
-  URL.revokeObjectURL(url);
+function monthKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function getNoEntregadosRows(rows) {
-  return rows.filter(r => toNumber(r[NO_COL]) > 0);
+function getMonthKeyFromRow(r) {
+  const d = parseDateAny(r[FECHA_COL]);
+  return d ? monthKey(d) : null;
 }
 
 /* ============================
-   CSV PARSER (soporta comillas)
+   UI
+============================ */
+function showError(msg) {
+  const el = document.getElementById("msg");
+  if (el) el.innerHTML = `<div class="error">${msg}</div>`;
+}
+
+/* ============================
+   CSV parser (quotes safe)
 ============================ */
 function parseDelimited(text, delimiter = ";") {
   const rows = [];
@@ -152,7 +167,7 @@ function parseDelimited(text, delimiter = ";") {
 }
 
 /* ============================
-   FILTROS
+   FILTERS
 ============================ */
 function filteredRowsByCliente() {
   const sel = document.getElementById("clienteSelect");
@@ -164,7 +179,7 @@ function filteredRowsByClienteYMes() {
   const rowsCliente = filteredRowsByCliente();
   const mes = document.getElementById("mesSelect")?.value || "";
   if (!mes) return rowsCliente;
-  return rowsCliente.filter(r => getMonthKeyFromRow(r) === mes);
+  return rowsCliente.filter((r) => getMonthKeyFromRow(r) === mes);
 }
 
 /* ============================
@@ -211,7 +226,7 @@ function buildMesSelect(rows) {
 }
 
 /* ============================
-   KPIs
+   KPI calculations
 ============================ */
 function calcTotals(rows) {
   let at = 0, ft = 0, no = 0;
@@ -224,8 +239,30 @@ function calcTotals(rows) {
   return { at, ft, no, total };
 }
 
+function calcMonthTotals(rows, month) {
+  let at = 0, ft = 0, no = 0;
+
+  for (const r of rows) {
+    if (getMonthKeyFromRow(r) !== month) continue;
+    at += toNumber(r[AT_COL]);
+    ft += toNumber(r[FT_COL]);
+    no += toNumber(r[NO_COL]);
+  }
+
+  const total = at + ft + no;
+  const pctAT = total ? at / total : NaN;
+  const pctFT = total ? ft / total : NaN;
+  const pctNO = total ? no / total : NaN;
+
+  return { at, ft, no, total, pctAT, pctFT, pctNO };
+}
+
+/* ============================
+   KPIs UI
+============================ */
 function updateKPIsGeneral(rows) {
   const t = calcTotals(rows);
+
   const pctAT = t.total ? t.at / t.total : NaN;
   const pctFT = t.total ? t.ft / t.total : NaN;
   const pctNO = t.total ? t.no / t.total : NaN;
@@ -242,24 +279,6 @@ function updateKPIsGeneral(rows) {
   document.getElementById("kpiNOqty").textContent = `Cantidad: ${fmtInt(t.no)}`;
 }
 
-function calcMonthTotals(rows, month) {
-  let at = 0, ft = 0, no = 0;
-  for (const r of rows) {
-    if (getMonthKeyFromRow(r) !== month) continue;
-    at += toNumber(r[AT_COL]);
-    ft += toNumber(r[FT_COL]);
-    no += toNumber(r[NO_COL]);
-  }
-
-  const total = at + ft + no;
-  const pctAT = total ? at / total : NaN;
-  const pctFT = total ? ft / total : NaN;
-  const pctNO = total ? no / total : NaN;
-  const pctTOT = total ? (at + ft) / total : NaN;
-
-  return { at, ft, no, total, pctAT, pctFT, pctNO, pctTOT };
-}
-
 function updateKPIsMonthly(rows, months) {
   const mes = document.getElementById("mesSelect")?.value || "";
   if (!mes) return;
@@ -270,45 +289,52 @@ function updateKPIsMonthly(rows, months) {
   const cur = calcMonthTotals(rows, mes);
   const prev = prevMes ? calcMonthTotals(rows, prevMes) : null;
 
-  // ✅ NUEVO: Comprometidos (mes) = AT + FT + NO
-  const kpiTotalMesEl = document.getElementById("kpiTotalMes");
-  if (kpiTotalMesEl) kpiTotalMesEl.textContent = fmtInt(cur.total);
+  document.getElementById("kpiTotalMes").textContent = fmtInt(cur.total);
 
-  // AT mes
   document.getElementById("kpiATmes").textContent = fmtPct01(cur.pctAT);
   document.getElementById("kpiATmesSub").textContent =
     `Cant: ${fmtInt(cur.at)} · ${prev ? fmtDelta01(cur.pctAT - prev.pctAT) : "Sin mes anterior"}`;
 
-  // FT mes
   document.getElementById("kpiFTmes").textContent = fmtPct01(cur.pctFT);
   document.getElementById("kpiFTmesSub").textContent =
     `Cant: ${fmtInt(cur.ft)} · ${prev ? fmtDelta01(cur.pctFT - prev.pctFT) : "Sin mes anterior"}`;
 
-  // NO mes
   document.getElementById("kpiNOmes").textContent = fmtPct01(cur.pctNO);
   document.getElementById("kpiNOmesSub").textContent =
     `Cant: ${fmtInt(cur.no)} · ${prev ? fmtDelta01(cur.pctNO - prev.pctNO) : "Sin mes anterior"}`;
-
-  // ENTREGADO TOTAL (AT+FT) mes (si lo estás mostrando en el KPI violeta)
-  const kpiTOTmesEl = document.getElementById("kpiTOTmes");
-  const kpiTOTmesSubEl = document.getElementById("kpiTOTmesSub");
-  if (kpiTOTmesEl) kpiTOTmesEl.textContent = fmtPct01(cur.pctTOT);
-  if (kpiTOTmesSubEl) {
-    kpiTOTmesSubEl.textContent =
-      `Cant: ${fmtInt(cur.at + cur.ft)} · ${prev ? fmtDelta01(cur.pctTOT - prev.pctTOT) : "Sin mes anterior"}`;
-  }
 }
 
+/* ============================
+   CHART DEFAULTS (Power BI feel)
+============================ */
+function applyChartDefaults() {
+  Chart.defaults.color = COLORS.text;
+  Chart.defaults.font.family = '"Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif';
+  Chart.defaults.font.weight = "700";
+
+  // Tooltips “limpios”
+  Chart.defaults.plugins.tooltip.backgroundColor = "rgba(255,255,255,0.96)";
+  Chart.defaults.plugins.tooltip.titleColor = COLORS.text;
+  Chart.defaults.plugins.tooltip.bodyColor = COLORS.text;
+  Chart.defaults.plugins.tooltip.borderColor = "rgba(2,8,20,.14)";
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.displayColors = true;
+  Chart.defaults.plugins.tooltip.padding = 10;
+
+  // Hover “Power BI style”
+  Chart.defaults.interaction.mode = "index";
+  Chart.defaults.interaction.intersect = false;
+}
 
 /* ============================
-   CHART 1: 100% apilado
+   CHART 1: 100% stacked bar
 ============================ */
 function buildChartMes(rows) {
   const agg = new Map();
   const monthsSet = new Set();
 
   for (const r of rows) {
-    const d = parseDateDMY(r[FECHA_COL]);
+    const d = parseDateAny(r[FECHA_COL]);
     if (!d) continue;
 
     const mk = monthKey(d);
@@ -351,40 +377,68 @@ function buildChartMes(rows) {
     data: {
       labels: months,
       datasets: [
-        { label: "Entregados AT", data: pAT, _q: qAT, stack: "s" },
-        { label: "Entregados FT", data: pFT, _q: qFT, stack: "s" },
-        { label: "No entregados", data: pNO, _q: qNO, stack: "s" },
+        {
+          label: "Entregados AT",
+          data: pAT,
+          _q: qAT,
+          stack: "s",
+          backgroundColor: COLORS.green
+        },
+        {
+          label: "Entregados FT",
+          data: pFT,
+          _q: qFT,
+          stack: "s",
+          backgroundColor: COLORS.amber
+        },
+        {
+          label: "No entregados",
+          data: pNO,
+          _q: qNO,
+          stack: "s",
+          backgroundColor: COLORS.red
+        },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: { stacked: true },
-        y: { stacked: true, beginAtZero: true, max: 100, ticks: { callback: (v) => v + "%" } },
+        x: {
+          stacked: true,
+          grid: { color: "transparent" },
+          ticks: { color: COLORS.muted }
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          max: 100,
+          grid: { color: COLORS.grid },
+          ticks: { callback: (v) => v + "%", color: COLORS.muted }
+        },
       },
       plugins: {
         legend: { position: "bottom" },
         tooltip: {
-          mode: "index",
-          intersect: false,
           callbacks: {
             label: (c) => {
               const pct = (c.parsed.y ?? 0).toFixed(1).replace(".", ",");
               const qty = c.dataset._q?.[c.dataIndex] ?? 0;
-              return `${c.dataset.label}: ${fmtInt(qty)} (${pct}%)`;
+              return ` ${c.dataset.label}: ${fmtInt(qty)} (${pct}%)`;
             },
           },
         },
         datalabels: {
           formatter: (v, ctx) => {
             const qty = ctx.dataset._q?.[ctx.dataIndex] ?? 0;
-            if (!qty || v < 4) return "";
-            return `${fmtInt(qty)} (${v.toFixed(1).replace(".", ",")}%)`;
+            if (!qty || v < 6) return "";
+            return `${fmtInt(qty)} (${v.toFixed(0)}%)`;
           },
           anchor: "center",
           align: "center",
           clamp: true,
+          color: "#ffffff",
+          font: { weight: "900", size: 11 }
         },
       },
     },
@@ -393,14 +447,14 @@ function buildChartMes(rows) {
 }
 
 /* ============================
-   CHART 2: Tendencia
+   CHART 2: Trend lines (straight + labels)
 ============================ */
 function buildChartTendencia(rows) {
   const agg = new Map();
   const monthsSet = new Set();
 
   for (const r of rows) {
-    const d = parseDateDMY(r[FECHA_COL]);
+    const d = parseDateAny(r[FECHA_COL]);
     if (!d) continue;
 
     const mk = monthKey(d);
@@ -415,7 +469,6 @@ function buildChartTendencia(rows) {
   }
 
   const months = [...monthsSet].sort();
-
   const pAT = months.map((m) => {
     const c = agg.get(m);
     const t = c.at + c.ft + c.no;
@@ -443,30 +496,67 @@ function buildChartTendencia(rows) {
     data: {
       labels: months,
       datasets: [
-        { label: "A Tiempo %", data: pAT, tension: 0, pointRadius: 4 },
-        { label: "Fuera Tiempo %", data: pFT, tension: 0, pointRadius: 4 },
-        { label: "No Entregados %", data: pNO, tension: 0, pointRadius: 4 },
+        {
+          label: "A Tiempo %",
+          data: pAT,
+          borderColor: COLORS.green,
+          backgroundColor: COLORS.green,
+          tension: 0,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBorderWidth: 2,
+        },
+        {
+          label: "Fuera Tiempo %",
+          data: pFT,
+          borderColor: COLORS.amber,
+          backgroundColor: COLORS.amber,
+          tension: 0,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBorderWidth: 2,
+        },
+        {
+          label: "No Entregados %",
+          data: pNO,
+          borderColor: COLORS.red,
+          backgroundColor: COLORS.red,
+          tension: 0,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBorderWidth: 2,
+        },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        y: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + "%" } },
+        x: {
+          grid: { color: "transparent" },
+          ticks: { color: COLORS.muted }
+        },
+        y: {
+          beginAtZero: true,
+          max: 100,
+          grid: { color: COLORS.grid },
+          ticks: { callback: (v) => v + "%", color: COLORS.muted }
+        },
       },
       plugins: {
         legend: { position: "bottom" },
         tooltip: {
           callbacks: {
-            label: (c) => `${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%`,
+            label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%`,
           },
         },
         datalabels: {
           align: "top",
           anchor: "end",
-          offset: 4,
-          formatter: (v) => `${Number(v).toFixed(1).replace(".", ",")}%`,
-          font: { size: 11, weight: "bold" },
+          offset: 6,
+          formatter: (v) => `${Number(v).toFixed(0)}%`,
+          color: COLORS.text,
+          font: { size: 11, weight: "900" },
         },
       },
     },
@@ -475,7 +565,38 @@ function buildChartTendencia(rows) {
 }
 
 /* ============================
-   APLICAR TODO
+   EXPORT CSV (NO ENTREGADOS)
+============================ */
+function escapeCSV(v) {
+  const s = (v ?? "").toString();
+  if (/[;"\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadCSV(filename, rows, cols) {
+  const header = cols.map(escapeCSV).join(";");
+  const lines = rows.map(r => cols.map(c => escapeCSV(r[c])).join(";"));
+  const csv = [header, ...lines].join("\r\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  URL.revokeObjectURL(url);
+}
+
+function getNoEntregadosRows(rows) {
+  return rows.filter(r => toNumber(r[NO_COL]) > 0);
+}
+
+/* ============================
+   APPLY ALL
 ============================ */
 function applyAll() {
   const rows = filteredRowsByCliente();
@@ -492,6 +613,8 @@ function applyAll() {
    INIT
 ============================ */
 window.addEventListener("DOMContentLoaded", () => {
+  applyChartDefaults();
+
   fetch(csvUrl)
     .then((r) => {
       if (!r.ok) throw new Error(`No pude abrir ${csvUrl} (HTTP ${r.status})`);
@@ -508,14 +631,14 @@ window.addEventListener("DOMContentLoaded", () => {
 
       CLIENT_COL = CLIENT_CANDIDATES.find((c) => headers.includes(c));
       if (!CLIENT_COL) {
-        showError("No encuentro columna CLIENTE (probé: " + CLIENT_CANDIDATES.join(" / ") + ")");
+        showError("No encuentro columna CLIENTE. Probé: " + CLIENT_CANDIDATES.join(" / "));
         return;
       }
 
       const required = [FECHA_COL, AT_COL, FT_COL, NO_COL];
       const missing = required.filter((c) => !headers.includes(c));
       if (missing.length) {
-        showError("Faltan columnas: " + missing.join(", "));
+        showError("Faltan columnas en el CSV: " + missing.join(", "));
         return;
       }
 
@@ -528,45 +651,48 @@ window.addEventListener("DOMContentLoaded", () => {
       const hint = document.getElementById("clienteHint");
       if (hint) hint.textContent = `Columna cliente: ${CLIENT_COL}`;
 
+      const monthsAll = [...new Set(data.map(getMonthKeyFromRow).filter(Boolean))].sort();
+      if (!monthsAll.length) {
+        showError(`No pude leer meses desde "${FECHA_COL}". Verificá formato (ej: 15/11/2025).`);
+        return;
+      }
+
       renderClientes();
       applyAll();
 
-      document.getElementById("clienteSelect").addEventListener("change", () => {
+      document.getElementById("clienteSelect")?.addEventListener("change", () => {
         applyAll();
       });
 
-      document.getElementById("mesSelect").addEventListener("change", () => {
+      document.getElementById("mesSelect")?.addEventListener("change", () => {
         const rows = filteredRowsByCliente();
         const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))].sort();
         updateKPIsMonthly(rows, months);
       });
 
-      // ✅ Botón descarga: respeta Cliente + Mes
-      const btn = document.getElementById("btnDownloadNO");
-      if (btn) {
-        btn.addEventListener("click", () => {
-          const rowsFilt = filteredRowsByClienteYMes();
-          const noRows = getNoEntregadosRows(rowsFilt);
+      document.getElementById("btnDownloadNO")?.addEventListener("click", () => {
+        const rowsFilt = filteredRowsByClienteYMes();
+        const noRows = getNoEntregadosRows(rowsFilt);
 
-          if (!noRows.length) {
-            alert("No hay NO ENTREGADOS para el filtro actual.");
-            return;
-          }
+        if (!noRows.length) {
+          alert("No hay NO ENTREGADOS para el filtro actual.");
+          return;
+        }
 
-          // Columnas a exportar (podés agregar más)
-          const cols = [CLIENT_COL, FECHA_COL, AT_COL, FT_COL, NO_COL];
+        const cols = [CLIENT_COL, FECHA_COL, AT_COL, FT_COL, NO_COL];
 
-          const cliente = safeFilePart(document.getElementById("clienteSelect")?.value || "Todos");
-          const mes = safeFilePart(document.getElementById("mesSelect")?.value || "Todos");
-          const filename = `NO_ENTREGADOS_${cliente}_${mes}.csv`;
+        const cliente = safeFilePart(document.getElementById("clienteSelect")?.value || "Todos");
+        const mes = safeFilePart(document.getElementById("mesSelect")?.value || "Todos");
+        const filename = `NO_ENTREGADOS_${cliente}_${mes}.csv`;
 
-          downloadCSV(filename, noRows, cols);
-        });
-      }
+        downloadCSV(filename, noRows, cols);
+      });
     })
     .catch((err) => {
       console.error(err);
-      showError("Error cargando CSV. Revisá que el nombre coincida y esté en la raíz del repo.");
+      showError("Error cargando CSV. Revisá nombre del archivo y que esté en la raíz del repo.");
     });
 });
+
+
 
