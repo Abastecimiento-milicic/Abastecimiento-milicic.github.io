@@ -254,7 +254,7 @@ body{
 }
 .kpi-sub{
   margin-top: 8px;
-  font-size: 13px;
+  font-size: 16px;
   color: var(--muted);
   font-weight: 700;
 }
@@ -322,5 +322,6 @@ body{
   .kpi-value{ font-size: 42px; }
   .chart-fixed{ height: 430px; }
 }
+
 
 
