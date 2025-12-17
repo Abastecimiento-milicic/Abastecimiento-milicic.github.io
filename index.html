@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Control de Compras - Construcción</title>
+  <title>CUMPLIMIENTO MENSUAL ACUMULADO</title>
 
   <link rel="stylesheet" href="styles.css" />
 
@@ -17,7 +17,7 @@
     <div class="container topbar-inner">
       <div class="topbar-left">
         <div class="topbar-title">Control de Compras - Construcción</div>
-        <div class="topbar-sub">Análisis de Cumplimiento de Pedidos por Obra</div>
+        <div class="topbar-sub">Análisis de Cumplimiento de pedidos por Obra</div>
       </div>
       <div class="topbar-right">
         <div class="topbar-small">Última actualización</div>
@@ -28,8 +28,8 @@
 
   <nav class="tabs">
     <div class="container tabs-inner">
-      <a class="tab active" href="#">CUMPLIMIENTO</a>
       <a class="tab" href="#">ANÁLISIS MM</a>
+      <a class="tab active" href="#">CUMPLIMIENTO</a>
       <a class="tab" href="#">DEMORAS</a>
     </div>
   </nav>
@@ -120,13 +120,13 @@
             <div class="kpi-label">COMPROMETIDOS (MES)</div>
             <div class="kpi-main">
               <div class="kpi-value" id="kpiTotalMes">-</div>
-              <div class="kpi-icon blue">📌</div>
+              <div class="kpi-icon blue">📦</div>
             </div>
             <div class="kpi-sub">Total del mes</div>
           </div>
 
           <div class="kpi-card kpi-green">
-            <div class="kpi-label">% AT (MES)</div>
+            <div class="kpi-label">% ENTREGADOS AT (MES)</div>
             <div class="kpi-main">
               <div class="kpi-value" id="kpiATmes">-</div>
               <div class="kpi-icon green">✓</div>
@@ -135,7 +135,7 @@
           </div>
 
           <div class="kpi-card kpi-amber">
-            <div class="kpi-label">% FT (MES)</div>
+            <div class="kpi-label">% ENTREGADOS FT (MES)</div>
             <div class="kpi-main">
               <div class="kpi-value" id="kpiFTmes">-</div>
               <div class="kpi-icon amber">⏱</div>
@@ -144,7 +144,7 @@
           </div>
 
           <div class="kpi-card kpi-red">
-            <div class="kpi-label">% NO (MES)</div>
+            <div class="kpi-label">% NO ENTREGADOS(MES)</div>
             <div class="kpi-main">
               <div class="kpi-value" id="kpiNOmes">-</div>
               <div class="kpi-icon red">⚠</div>
@@ -198,3 +198,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+
