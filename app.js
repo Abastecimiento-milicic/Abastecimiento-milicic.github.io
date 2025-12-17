@@ -1,7 +1,7 @@
 /* ============================
    CONFIG
 ============================ */
-const csvUrl = "CUMPLIMIENTO_2025.csv";
+const csvUrl = "CUMPLIMIENTO_2025.csv";  // nombre EXACTO en tu repo
 const DELIM = ";";
 
 const FECHA_COL = "FECHA ENTREGA ESPERADA";
@@ -12,14 +12,14 @@ const FT_COL = "ENTREGADOS FT";
 const NO_COL = "NO ENTREGADOS";
 
 /* ============================
-   COLORES (igual a CSS)
+   COLORES (match KPIs)
 ============================ */
 const COLORS = {
   blue:  "#1d4ed8",
   green: "#16a34a",
   amber: "#f59e0b",
   red:   "#ef4444",
-  grid:  "rgba(15, 23, 42, 0.08)",
+  grid:  "rgba(15, 23, 42, 0.10)",
   text:  "#0b1220",
   muted: "#526172",
 };
@@ -43,6 +43,7 @@ function toNumber(v) {
   let x = clean(v);
   if (!x) return 0;
   x = x.replace(/\s/g, "");
+  // soporte 1.234,56 y 1234,56 y 1234.56
   if (x.includes(",")) x = x.replace(/\./g, "").replace(",", ".");
   const n = Number(x);
   return Number.isFinite(n) ? n : 0;
@@ -61,35 +62,24 @@ function safeFilePart(s) {
   return clean(s).replace(/[^\w\-]+/g, "_").slice(0, 80) || "Todos";
 }
 
+function showError(msg) {
+  const el = document.getElementById("msg");
+  if (el) el.innerHTML = `<div class="error">${msg}</div>`;
+}
+
 /* ============================
    DATE PARSING
-   - dd/mm/yyyy (principal)
-   - dd-mm-yyyy
-   - yyyy-mm-dd
+   dd/mm/yyyy | dd-mm-yyyy | yyyy-mm-dd
 ============================ */
 function parseDateAny(s) {
   const t = clean(s);
   if (!t) return null;
 
-  // dd/mm/yyyy or dd-mm-yyyy
   let m = t.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (m) {
-    const d = parseInt(m[1], 10);
-    const mo = parseInt(m[2], 10);
-    const y = parseInt(m[3], 10);
-    if (!y || !mo || !d) return null;
-    return new Date(y, mo - 1, d);
-  }
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
 
-  // yyyy-mm-dd
   m = t.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
-  if (m) {
-    const y = parseInt(m[1], 10);
-    const mo = parseInt(m[2], 10);
-    const d = parseInt(m[3], 10);
-    if (!y || !mo || !d) return null;
-    return new Date(y, mo - 1, d);
-  }
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
 
   return null;
 }
@@ -101,14 +91,6 @@ function monthKey(d) {
 function getMonthKeyFromRow(r) {
   const d = parseDateAny(r[FECHA_COL]);
   return d ? monthKey(d) : null;
-}
-
-/* ============================
-   UI
-============================ */
-function showError(msg) {
-  const el = document.getElementById("msg");
-  if (el) el.innerHTML = `<div class="error">${msg}</div>`;
 }
 
 /* ============================
@@ -159,14 +141,14 @@ function parseDelimited(text, delimiter = ";") {
 function filteredRowsByCliente() {
   const sel = document.getElementById("clienteSelect");
   const c = sel ? sel.value : "";
-  return c ? data.filter((r) => clean(r[CLIENT_COL]) === c) : data;
+  return c ? data.filter(r => clean(r[CLIENT_COL]) === c) : data;
 }
 
 function filteredRowsByClienteYMes() {
-  const rowsCliente = filteredRowsByCliente();
+  const rows = filteredRowsByCliente();
   const mes = document.getElementById("mesSelect")?.value || "";
-  if (!mes) return rowsCliente;
-  return rowsCliente.filter((r) => getMonthKeyFromRow(r) === mes);
+  if (!mes) return rows;
+  return rows.filter(r => getMonthKeyFromRow(r) === mes);
 }
 
 /* ============================
@@ -176,10 +158,10 @@ function renderClientes() {
   const sel = document.getElementById("clienteSelect");
   if (!sel) return;
 
-  sel.querySelectorAll("option:not([value=''])").forEach((o) => o.remove());
+  sel.querySelectorAll("option:not([value=''])").forEach(o => o.remove());
 
-  const clientes = [...new Set(data.map((r) => clean(r[CLIENT_COL])).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b, "es"));
+  const clientes = [...new Set(data.map(r => clean(r[CLIENT_COL])).filter(Boolean))]
+    .sort((a,b) => a.localeCompare(b, "es"));
 
   for (const c of clientes) {
     const o = document.createElement("option");
@@ -204,6 +186,7 @@ function buildMesSelect(rows) {
     sel.appendChild(o);
   }
 
+  // por defecto: último mes disponible
   sel.value = months.includes(prevSelected) ? prevSelected : (months[months.length - 1] || "");
 
   const hint = document.getElementById("mesHint");
@@ -213,7 +196,7 @@ function buildMesSelect(rows) {
 }
 
 /* ============================
-   KPI calculations
+   KPI CALCS
 ============================ */
 function calcTotals(rows) {
   let at = 0, ft = 0, no = 0;
@@ -245,7 +228,7 @@ function calcMonthTotals(rows, month) {
 }
 
 /* ============================
-   DELTAS (con tolerancia)
+   DELTAS
 ============================ */
 function deltaInfo(curr, prev) {
   if (!isFinite(curr) || !isFinite(prev)) return { text: "Sin mes anterior", diff: NaN };
@@ -257,12 +240,18 @@ function deltaInfo(curr, prev) {
   return { text: txt, diff };
 }
 
+function setDelta(el, text, cls) {
+  if (!el) return;
+  el.classList.remove("delta-good", "delta-bad", "delta-neutral");
+  if (cls) el.classList.add(cls);
+  el.textContent = text;
+}
+
 /* ============================
    KPIs UI
 ============================ */
 function updateKPIsGeneral(rows) {
   const t = calcTotals(rows);
-
   const pctAT = t.total ? t.at / t.total : NaN;
   const pctFT = t.total ? t.ft / t.total : NaN;
   const pctNO = t.total ? t.no / t.total : NaN;
@@ -290,7 +279,6 @@ function updateKPIsMonthly(rows, months) {
   const prev = prevMes ? calcMonthTotals(rows, prevMes) : null;
 
   document.getElementById("kpiTotalMes").textContent = fmtInt(cur.total);
-
   document.getElementById("kpiATmes").textContent = fmtPct01(cur.pctAT);
   document.getElementById("kpiFTmes").textContent = fmtPct01(cur.pctFT);
   document.getElementById("kpiNOmes").textContent = fmtPct01(cur.pctNO);
@@ -298,13 +286,6 @@ function updateKPIsMonthly(rows, months) {
   const atSub = document.getElementById("kpiATmesSub");
   const ftSub = document.getElementById("kpiFTmesSub");
   const noSub = document.getElementById("kpiNOmesSub");
-
-  function setDelta(el, text, cls) {
-    if (!el) return;
-    el.classList.remove("delta-good", "delta-bad", "delta-neutral");
-    if (cls) el.classList.add(cls);
-    el.textContent = text;
-  }
 
   if (!prev) {
     setDelta(atSub, `Cant: ${fmtInt(cur.at)} · Sin mes anterior`, "");
@@ -323,19 +304,14 @@ function updateKPIsMonthly(rows, months) {
     FT: sube o se mantiene = rojo, baja = verde
     NO: sube = rojo, baja o se mantiene = verde
   */
-  let clsAT = "delta-neutral";
-  if (dAT.diff > 0) clsAT = "delta-good";
-  else if (dAT.diff < 0) clsAT = "delta-bad";
-  else clsAT = "delta-good";
+  let clsAT = "delta-good";
+  if (dAT.diff < 0) clsAT = "delta-bad";
 
-  let clsFT = "delta-neutral";
-  if (dFT.diff > 0) clsFT = "delta-bad";
-  else if (dFT.diff < 0) clsFT = "delta-good";
-  else clsFT = "delta-bad"; // se mantiene = rojo
+  let clsFT = "delta-bad";
+  if (dFT.diff < 0) clsFT = "delta-good";
 
-  let clsNO = "delta-neutral";
+  let clsNO = "delta-good";
   if (dNO.diff > 0) clsNO = "delta-bad";
-  else clsNO = "delta-good"; // baja o se mantiene = verde
 
   setDelta(atSub, `Cant: ${fmtInt(cur.at)} · ${dAT.text}`, clsAT);
   setDelta(ftSub, `Cant: ${fmtInt(cur.ft)} · ${dFT.text}`, clsFT);
@@ -343,23 +319,26 @@ function updateKPIsMonthly(rows, months) {
 }
 
 /* ============================
-   CHART DEFAULTS (Power BI feel)
+   CHART DEFAULTS (Power BI hover)
 ============================ */
 function applyChartDefaults() {
+  Chart.register(ChartDataLabels);
+
   Chart.defaults.color = COLORS.text;
   Chart.defaults.font.family = '"Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif';
-  Chart.defaults.font.weight = "700";
-
-  Chart.defaults.plugins.tooltip.backgroundColor = "rgba(255,255,255,0.96)";
-  Chart.defaults.plugins.tooltip.titleColor = COLORS.text;
-  Chart.defaults.plugins.tooltip.bodyColor = COLORS.text;
-  Chart.defaults.plugins.tooltip.borderColor = "rgba(2,8,20,.14)";
-  Chart.defaults.plugins.tooltip.borderWidth = 1;
-  Chart.defaults.plugins.tooltip.displayColors = true;
-  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.font.weight = "800";
 
   Chart.defaults.interaction.mode = "index";
   Chart.defaults.interaction.intersect = false;
+
+  // Tooltip estilo “Power BI”
+  Chart.defaults.plugins.tooltip.backgroundColor = "rgba(255,255,255,0.97)";
+  Chart.defaults.plugins.tooltip.titleColor = COLORS.text;
+  Chart.defaults.plugins.tooltip.bodyColor = COLORS.text;
+  Chart.defaults.plugins.tooltip.borderColor = "rgba(2,8,20,.18)";
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.displayColors = true;
 }
 
 /* ============================
@@ -385,81 +364,72 @@ function buildChartMes(rows) {
   }
 
   const months = [...monthsSet].sort();
-  const qAT = months.map((m) => agg.get(m)?.at ?? 0);
-  const qFT = months.map((m) => agg.get(m)?.ft ?? 0);
-  const qNO = months.map((m) => agg.get(m)?.no ?? 0);
+  const qAT = months.map(m => agg.get(m)?.at ?? 0);
+  const qFT = months.map(m => agg.get(m)?.ft ?? 0);
+  const qNO = months.map(m => agg.get(m)?.no ?? 0);
 
-  const pAT = qAT.map((v, i) => {
-    const t = qAT[i] + qFT[i] + qNO[i];
-    return t ? (v / t) * 100 : 0;
-  });
-  const pFT = qFT.map((v, i) => {
-    const t = qAT[i] + qFT[i] + qNO[i];
-    return t ? (v / t) * 100 : 0;
-  });
-  const pNO = qNO.map((v, i) => {
-    const t = qAT[i] + qFT[i] + qNO[i];
-    return t ? (v / t) * 100 : 0;
-  });
+  const pAT = qAT.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t)*100 : 0; });
+  const pFT = qFT.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t)*100 : 0; });
+  const pNO = qNO.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t)*100 : 0; });
 
   const canvas = document.getElementById("chartMes");
   if (!canvas) return;
-  const ctx = canvas.getContext("2d");
 
   if (chartMes) chartMes.destroy();
 
-  chartMes = new Chart(ctx, {
+  chartMes = new Chart(canvas.getContext("2d"), {
     type: "bar",
     data: {
       labels: months,
       datasets: [
-        { label: "Entregados AT", data: pAT, _q: qAT, stack: "s", backgroundColor: COLORS.green },
-        { label: "Entregados FT", data: pFT, _q: qFT, stack: "s", backgroundColor: COLORS.amber },
-        { label: "No entregados", data: pNO, _q: qNO, stack: "s", backgroundColor: COLORS.red  },
-      ],
+        { label: "Entregados AT", data: pAT, _q: qAT, stack:"s", backgroundColor: COLORS.green },
+        { label: "Entregados FT", data: pFT, _q: qFT, stack:"s", backgroundColor: COLORS.amber },
+        { label: "No entregados", data: pNO, _q: qNO, stack:"s", backgroundColor: COLORS.red },
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: { stacked: true, grid: { color: "transparent" }, ticks: { color: COLORS.muted } },
+        x: { stacked:true, grid:{ color:"transparent" }, ticks:{ color: COLORS.muted } },
         y: {
-          stacked: true, beginAtZero: true, max: 100,
-          grid: { color: COLORS.grid },
-          ticks: { callback: (v) => v + "%", color: COLORS.muted }
-        },
+          stacked:true,
+          beginAtZero:true,
+          max:100,
+          grid:{ color: COLORS.grid },
+          ticks:{ color: COLORS.muted, callback:(v)=> v + "%" }
+        }
       },
       plugins: {
-        legend: { position: "bottom" },
+        legend: { position:"bottom" },
         tooltip: {
           callbacks: {
             label: (c) => {
               const pct = (c.parsed.y ?? 0).toFixed(1).replace(".", ",");
               const qty = c.dataset._q?.[c.dataIndex] ?? 0;
               return ` ${c.dataset.label}: ${fmtInt(qty)} (${pct}%)`;
-            },
-          },
+            }
+          }
         },
         datalabels: {
           formatter: (v, ctx) => {
             const qty = ctx.dataset._q?.[ctx.dataIndex] ?? 0;
-            if (!qty || v < 6) return "";
+            if (!qty || v < 7) return "";
             return `${fmtInt(qty)} (${v.toFixed(0)}%)`;
           },
           anchor: "center",
           align: "center",
           clamp: true,
-          color: "#ffffff",
+          color: "#fff",
           font: { weight: "900", size: 11 }
-        },
-      },
-    },
-    plugins: [ChartDataLabels],
+        }
+      }
+    }
   });
 }
 
 /* ============================
-   CHART 2: Trend lines
+   CHART 2: Trend lines (rectas + etiquetas %)
 ============================ */
 function buildChartTendencia(rows) {
   const agg = new Map();
@@ -481,37 +451,61 @@ function buildChartTendencia(rows) {
   }
 
   const months = [...monthsSet].sort();
-  const pAT = months.map((m) => {
+
+  const pAT = months.map(m => {
     const c = agg.get(m); const t = c.at + c.ft + c.no;
     return t ? (c.at / t) * 100 : 0;
   });
-  const pFT = months.map((m) => {
+  const pFT = months.map(m => {
     const c = agg.get(m); const t = c.at + c.ft + c.no;
     return t ? (c.ft / t) * 100 : 0;
   });
-  const pNO = months.map((m) => {
+  const pNO = months.map(m => {
     const c = agg.get(m); const t = c.at + c.ft + c.no;
     return t ? (c.no / t) * 100 : 0;
   });
 
   const canvas = document.getElementById("chartTendencia");
   if (!canvas) return;
-  const ctx = canvas.getContext("2d");
 
   if (chartTendencia) chartTendencia.destroy();
 
-  chartTendencia = new Chart(ctx, {
+  chartTendencia = new Chart(canvas.getContext("2d"), {
     type: "line",
     data: {
       labels: months,
       datasets: [
-        { label: "A Tiempo %", data: pAT, borderColor: COLORS.green, backgroundColor: COLORS.green,
-          tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
-        { label: "Fuera Tiempo %", data: pFT, borderColor: COLORS.amber, backgroundColor: COLORS.amber,
-          tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
-        { label: "No Entregados %", data: pNO, borderColor: COLORS.red, backgroundColor: COLORS.red,
-          tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
-      ],
+        {
+          label: "A Tiempo %",
+          data: pAT,
+          borderColor: COLORS.green,
+          backgroundColor: COLORS.green,
+          tension: 0,                 // recta
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBorderWidth: 2
+        },
+        {
+          label: "Fuera Tiempo %",
+          data: pFT,
+          borderColor: COLORS.amber,
+          backgroundColor: COLORS.amber,
+          tension: 0,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBorderWidth: 2
+        },
+        {
+          label: "No Entregados %",
+          data: pNO,
+          borderColor: COLORS.red,
+          backgroundColor: COLORS.red,
+          tension: 0,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBorderWidth: 2
+        }
+      ]
     },
     options: {
       responsive: true,
@@ -519,30 +513,34 @@ function buildChartTendencia(rows) {
       scales: {
         x: { grid: { color: "transparent" }, ticks: { color: COLORS.muted } },
         y: {
-          beginAtZero: true, max: 100,
+          beginAtZero: true,
+          max: 100,
           grid: { color: COLORS.grid },
-          ticks: { callback: (v) => v + "%", color: COLORS.muted }
-        },
+          ticks: { color: COLORS.muted, callback: (v) => v + "%" }
+        }
       },
       plugins: {
         legend: { position: "bottom" },
-        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%` } },
+        tooltip: {
+          callbacks: {
+            label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%`
+          }
+        },
         datalabels: {
           align: "top",
           anchor: "end",
           offset: 6,
           formatter: (v) => `${Number(v).toFixed(0)}%`,
           color: COLORS.text,
-          font: { size: 11, weight: "900" },
-        },
-      },
-    },
-    plugins: [ChartDataLabels],
+          font: { size: 11, weight: "900" }
+        }
+      }
+    }
   });
 }
 
 /* ============================
-   EXPORT CSV (NO ENTREGADOS)
+   DOWNLOAD: NO ENTREGADOS
 ============================ */
 function escapeCSV(v) {
   const s = (v ?? "").toString();
@@ -592,12 +590,17 @@ function applyAll() {
 window.addEventListener("DOMContentLoaded", () => {
   applyChartDefaults();
 
+  // fecha “hoy” en header (si querés otra, lo cambiás manual)
+  const d = new Date();
+  document.getElementById("lastUpdate").textContent =
+    `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+
   fetch(csvUrl)
-    .then((r) => {
+    .then(r => {
       if (!r.ok) throw new Error(`No pude abrir ${csvUrl} (HTTP ${r.status})`);
       return r.text();
     })
-    .then((text) => {
+    .then(text => {
       const m = parseDelimited(text, DELIM);
       if (!m.length || m.length < 2) {
         showError("El CSV está vacío o no tiene filas.");
@@ -606,34 +609,31 @@ window.addEventListener("DOMContentLoaded", () => {
 
       headers = m[0].map(clean);
 
-      CLIENT_COL = CLIENT_CANDIDATES.find((c) => headers.includes(c));
+      CLIENT_COL = CLIENT_CANDIDATES.find(c => headers.includes(c));
       if (!CLIENT_COL) {
         showError("No encuentro columna CLIENTE. Probé: " + CLIENT_CANDIDATES.join(" / "));
         return;
       }
 
       const required = [FECHA_COL, AT_COL, FT_COL, NO_COL];
-      const missing = required.filter((c) => !headers.includes(c));
+      const missing = required.filter(c => !headers.includes(c));
       if (missing.length) {
         showError("Faltan columnas en el CSV: " + missing.join(", "));
         return;
       }
 
-      data = m.slice(1).map((r) => {
+      data = m.slice(1).map(row => {
         const o = {};
-        headers.forEach((h, i) => (o[h] = clean(r[i])));
+        headers.forEach((h, i) => (o[h] = clean(row[i])));
         return o;
       });
 
-      const hint = document.getElementById("clienteHint");
-      if (hint) hint.textContent = `Columna cliente: ${CLIENT_COL}`;
+      document.getElementById("clienteHint").textContent = `Columna cliente: ${CLIENT_COL}`;
 
       renderClientes();
       applyAll();
 
-      document.getElementById("clienteSelect")?.addEventListener("change", () => {
-        applyAll();
-      });
+      document.getElementById("clienteSelect")?.addEventListener("change", applyAll);
 
       document.getElementById("mesSelect")?.addEventListener("change", () => {
         const rows = filteredRowsByCliente();
@@ -659,8 +659,9 @@ window.addEventListener("DOMContentLoaded", () => {
         downloadCSV(filename, noRows, cols);
       });
     })
-    .catch((err) => {
+    .catch(err => {
       console.error(err);
-      showError("Error cargando CSV. Revisá nombre del archivo y que esté en la raíz del repo.");
+      showError("Error cargando CSV. Revisá el nombre del archivo y que esté en la raíz del repo.");
     });
 });
+
