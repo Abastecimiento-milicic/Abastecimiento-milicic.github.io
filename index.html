@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dashboard Entregas</title>
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+</head>
+
+<body>
+  <h2>Entregas por mes (AT / FT / No entregados)</h2>
+
+  <!-- Filtros + descarga -->
+  <div class="row topRow">
+    <div class="box filter">
+      <label for="clienteSelect"><b>Cliente</b></label>
+      <select id="clienteSelect">
+        <option value="">Todos</option>
+      </select>
+      <div class="hint" id="clienteHint"></div>
+    </div>
+
+    <div class="box filter small">
+      <label for="mesSelect"><b>Mes</b></label>
+      <select id="mesSelect"></select>
+      <div class="hint" id="mesHint"></div>
+    </div>
+
+    <button id="btnDownloadNO" class="btnDownload" title="Descargar NO entregados (CSV para Excel)">
+      ⬇ Descargar NO entregados
+    </button>
+  </div>
+
+  <div id="msg"></div>
+
+  <!-- KPIs generales -->
+  <div class="row">
+    <div class="box kpi">
+      <div class="title">Cantidad de pedidos</div>
+      <div class="value" id="kpiTotal">-</div>
+      <div class="sub">AT + FT + No entregados</div>
+    </div>
+
+    <div class="box kpi">
+      <div class="title">% Entregados AT</div>
+      <div class="value" id="kpiATpct">-</div>
+      <div class="sub" id="kpiATqty">-</div>
+    </div>
+
+    <div class="box kpi">
+      <div class="title">% Entregados FT</div>
+      <div class="value" id="kpiFTpct">-</div>
+      <div class="sub" id="kpiFTqty">-</div>
+    </div>
+
+    <div class="box kpi">
+      <div class="title">% No entregados</div>
+      <div class="value" id="kpiNOpct">-</div>
+      <div class="sub" id="kpiNOqty">-</div>
+    </div>
+  </div>
+
+  <!-- KPIs mensuales + variación -->
+  <div class="row">
+    <div class="box kpi">
+      <div class="title">% AT (mes)</div>
+      <div class="value" id="kpiATmes">-</div>
+      <div class="sub" id="kpiATmesSub">-</div>
+    </div>
+
+    <div class="box kpi">
+      <div class="title">% FT (mes)</div>
+      <div class="value" id="kpiFTmes">-</div>
+      <div class="sub" id="kpiFTmesSub">-</div>
+    </div>
+
+    <div class="box kpi">
+      <div class="title">% NO (mes)</div>
+      <div class="value" id="kpiNOmes">-</div>
+      <div class="sub" id="kpiNOmesSub">-</div>
+    </div>
+
+    <div class="box kpi">
+      <div class="title">% ENTREGADO TOTAL (AT+FT) (mes)</div>
+      <div class="value" id="kpiTOTmes">-</div>
+      <div class="sub" id="kpiTOTmesSub">-</div>
+    </div>
+  </div>
+
+  <!-- Gráfico 1 -->
+  <div class="box chartWrap">
+    <div class="chartTitle">AT / FT / No entregados por mes (100% apilado)</div>
+    <canvas id="chartMes"></canvas>
+    <div class="hint">Etiqueta: <b>cantidad (xx.x%)</b></div>
+  </div>
+
+  <!-- Gráfico 2 -->
+  <div class="box chartWrap">
+    <div class="chartTitle">Tendencia (línea recta + etiquetas %)</div>
+    <canvas id="chartTendencia"></canvas>
+    <div class="hint">Series: AT %, FT %, NO % (por mes)</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
