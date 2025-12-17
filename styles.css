@@ -1,249 +1,326 @@
-/* ===============================
-   RESET + BASE
-================================ */
-* {
-  box-sizing: border-box;
-  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+:root{
+  /* Base */
+  --bg: #f3f6f8;
+  --card: #ffffff;
+  --line: #e6eaef;
+
+  --text: #0b1220;     /* números oscuros */
+  --muted: #526172;
+
+  /* Brand */
+  --brand: #0b5d4a;
+
+  /* KPI/Charts (IGUALAR con Chart.js) */
+  --blue:  #1d4ed8;  /* Comprometidos */
+  --green: #16a34a;  /* AT */
+  --amber: #f59e0b;  /* FT */
+  --red:   #ef4444;  /* NO */
+
+  /* Hover / Shadow */
+  --shadow: 0 10px 28px rgba(2, 8, 20, .08);
+  --shadow2: 0 14px 36px rgba(2, 8, 20, .12);
+
+  --r12: 12px;
+  --r14: 14px;
 }
 
-body {
-  margin: 0;
-  background: #f4f6f8;
-  color: #1f2937;
+*{ box-sizing: border-box; }
+html,body{ height: 100%; }
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
 }
 
-/* ===============================
-   COLORES BASE (tipo Power BI)
-================================ */
-:root {
-  --verde-oscuro: #0b5d4a;
-
-  --azul: #2563eb;        /* Comprometidos */
-  --verde: #22c55e;       /* AT */
-  --naranja: #f59e0b;     /* FT */
-  --rojo: #ef4444;        /* NO */
-
-  --texto-principal: #0f172a;
-  --texto-secundario: #475569;
-  --fondo-card: #ffffff;
-  --borde-card: #e5e7eb;
+.container{
+  width: min(1280px, calc(100% - 32px));
+  margin: 0 auto;
 }
 
-/* ===============================
-   HEADER
-================================ */
-header {
-  background: var(--verde-oscuro);
-  color: #ffffff;
-  padding: 14px 24px;
-  display: flex;
+.page{ padding-bottom: 20px; }
+
+/* ================= HEADER ================= */
+.topbar{
+  background: var(--brand);
+  color: #fff;
+  padding: 14px 0;
+}
+.topbar-inner{
+  display:flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
-
-header h1 {
-  font-size: 18px;
-  margin: 0;
-  font-weight: 700;
-}
-
-header small {
-  font-size: 12px;
-  opacity: 0.9;
-}
-
-/* ===============================
-   SECCIONES
-================================ */
-.section {
-  margin: 18px;
-  background: transparent;
-}
-
-.section-title {
-  background: var(--verde-oscuro);
-  color: #ffffff;
-  padding: 10px 14px;
-  border-radius: 10px 10px 0 0;
-  font-weight: 700;
-  letter-spacing: .3px;
-}
-
-/* ===============================
-   GRID TARJETAS
-================================ */
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
-  padding: 14px;
-  background: #ffffff;
-  border-radius: 0 0 12px 12px;
-}
-
-/* ===============================
-   TARJETA KPI
-================================ */
-.card {
-  background: var(--fondo-card);
-  border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 8px 20px rgba(0,0,0,.06);
-  position: relative;
-  border-left: 6px solid var(--borde-card);
-}
-
-/* colores por tipo */
-.card.azul { border-left-color: var(--azul); }
-.card.verde { border-left-color: var(--verde); }
-.card.naranja { border-left-color: var(--naranja); }
-.card.rojo { border-left-color: var(--rojo); }
-
-.card h4 {
-  margin: 0 0 6px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  color: var(--texto-secundario);
-}
-
-/* número principal */
-.card .value {
-  font-size: 34px;
+.topbar-title{
+  font-size: 20px;
   font-weight: 800;
-  color: var(--texto-principal);
-  line-height: 1.1;
+  letter-spacing: .2px;
 }
-
-/* porcentaje */
-.card .percent {
-  font-size: 30px;
-  font-weight: 800;
-  color: var(--texto-principal);
-}
-
-/* detalle */
-.card .detail {
-  margin-top: 6px;
-  font-size: 14px;
-  color: var(--texto-secundario);
-  font-weight: 600;
-}
-
-/* variación */
-.card .delta {
-  margin-top: 4px;
+.topbar-sub{
   font-size: 13px;
-  font-weight: 700;
+  opacity: .95;
+  margin-top: 2px;
 }
-
-.delta.up {
-  color: var(--rojo);
-}
-
-.delta.down {
-  color: var(--verde);
-}
-
-/* icono */
-.card .icon {
-  position: absolute;
-  right: 14px;
-  top: 14px;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  background: #f1f5f9;
-}
-
-/* ===============================
-   FILTROS
-================================ */
-.filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  padding: 14px;
-  background: #ffffff;
-  border-radius: 12px;
-  margin: 18px;
-}
-
-.filter {
-  display: flex;
-  flex-direction: column;
-}
-
-.filter label {
-  font-size: 12px;
-  color: var(--texto-secundario);
-  margin-bottom: 4px;
-  font-weight: 700;
-}
-
-.filter select {
+.topbar-right{
+  text-align: right;
+  border: 2px solid rgba(255,255,255,.35);
   padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--borde-card);
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: 10px;
 }
-
-/* ===============================
-   GRAFICOS
-================================ */
-.chart-box {
-  background: #ffffff;
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 8px 20px rgba(0,0,0,.06);
-  margin: 18px;
-}
-
-.chart-title {
-  font-weight: 800;
-  color: var(--verde-oscuro);
-  margin-bottom: 10px;
-  font-size: 14px;
-}
-
-/* Evita que los charts se agranden */
-canvas {
-  max-height: 300px !important;
-}
-
-/* ===============================
-   BOTON DESCARGA
-================================ */
-button.download {
-  background: var(--verde-oscuro);
-  color: #ffffff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-button.download:hover {
+.topbar-small{
+  font-size: 11px;
   opacity: .9;
 }
-
-/* ===============================
-   RESPONSIVE
-================================ */
-@media (max-width: 768px) {
-  .cards {
-    grid-template-columns: 1fr;
-  }
-
-  header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
+.topbar-date{
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 2px;
 }
+
+/* ================= TABS ================= */
+.tabs{
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+.tabs-inner{
+  display:flex;
+  gap: 16px;
+  padding: 10px 0;
+}
+.tab{
+  display:inline-block;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 10px;
+  border-radius: 10px;
+  transition: all .15s ease;
+}
+.tab:hover{
+  background: #f0f4f7;
+  color: #0f172a;
+}
+.tab.active{
+  color: #fff;
+  background: #0b1f54;
+}
+
+/* ================= PANEL / FILTERS ================= */
+.panel{
+  margin-top: 14px;
+  background: #fff;
+  border-radius: var(--r14);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.filters{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  padding: 14px;
+  align-items: end;
+}
+.filter label{
+  font-size: 12px;
+  font-weight: 900;
+  color: #355166;
+  letter-spacing: .35px;
+}
+.filter select{
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0 12px;
+  font-weight: 800;
+  font-size: 15px;
+  outline: none;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.filter select:hover{
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 4px rgba(29,78,216,.07);
+}
+.hint{
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* Button */
+.btn{
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0 14px;
+  transition: transform .12s ease, box-shadow .15s ease, filter .15s ease;
+}
+.btn-primary{
+  background: #fff;
+}
+.btn:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+  filter: brightness(0.98);
+}
+.btn:active{
+  transform: translateY(0px);
+  box-shadow: none;
+}
+
+.msg{
+  padding: 0 14px 14px 14px;
+}
+.msg .error{
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 12px;
+  color: #9f1239;
+  font-weight: 800;
+}
+
+/* ================= SECTIONS ================= */
+.section{
+  margin-top: 16px;
+}
+.section-head{
+  background: var(--brand);
+  color: #fff;
+  padding: 12px 14px;
+  border-radius: var(--r14) var(--r14) 0 0;
+  font-weight: 900;
+  letter-spacing: .35px;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+.section-body{
+  background: #fff;
+  border-radius: 0 0 var(--r14) var(--r14);
+  border: 1px solid var(--line);
+  border-top: none;
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+/* ================= KPI CARDS ================= */
+.kpi-grid{
+  display:grid;
+  gap: 14px;
+}
+.kpi-4{
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.kpi-card{
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r14);
+  padding: 14px;
+  box-shadow: 0 8px 18px rgba(2,8,20,.06);
+  transition: transform .12s ease, box-shadow .15s ease;
+  position: relative;
+}
+.kpi-card:hover{
+  transform: translateY(-2px);
+  box-shadow: var(--shadow2);
+}
+
+.kpi-label{
+  font-size: 12px;
+  font-weight: 900;
+  color: #5b6b7c;
+  letter-spacing: .35px;
+  text-transform: uppercase;
+}
+.kpi-main{
+  display:flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+.kpi-value{
+  font-size: 34px;
+  font-weight: 950;
+  color: var(--text);
+  letter-spacing: .2px;
+  line-height: 1.08;
+}
+.kpi-sub{
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.kpi-icon{
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 900;
+  border: 1px solid rgba(2,8,20,.08);
+}
+
+/* Colored left bars like Power BI */
+.kpi-blue{ border-left: 6px solid var(--blue); }
+.kpi-green{ border-left: 6px solid var(--green); }
+.kpi-amber{ border-left: 6px solid var(--amber); }
+.kpi-red{ border-left: 6px solid var(--red); }
+
+.kpi-icon.blue{ background: rgba(29,78,216,.10); color: var(--blue); }
+.kpi-icon.green{ background: rgba(22,163,74,.10); color: var(--green); }
+.kpi-icon.amber{ background: rgba(245,158,11,.12); color: var(--amber); }
+.kpi-icon.red{ background: rgba(239,68,68,.10); color: var(--red); }
+
+/* ================= CHARTS ================= */
+.charts-vertical{
+  display:flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chart-shell{
+  border: 1px solid var(--line);
+  border-radius: var(--r14);
+  padding: 12px;
+  background: #fff;
+}
+.chart-title{
+  font-weight: 950;
+  color: #0f3f35;
+  margin-bottom: 10px;
+  letter-spacing: .2px;
+}
+.chart-fixed{
+  height: 340px;
+}
+.chart-fixed canvas{
+  width: 100% !important;
+  height: 100% !important;
+  display:block;
+}
+
+/* ================= LARGE SCREENS (TV) ================= */
+@media (min-width: 1400px){
+  .container{ width: min(1500px, calc(100% - 60px)); }
+  .topbar-title{ font-size: 22px; }
+  .kpi-value{ font-size: 38px; }
+  .chart-fixed{ height: 380px; }
+}
+@media (min-width: 1800px){
+  body{ zoom: 1.05; } /* “modo TV” sin romper layout */
+  .container{ width: min(1750px, calc(100% - 80px)); }
+  .kpi-value{ font-size: 42px; }
+  .chart-fixed{ height: 430px; }
+}
+
+
