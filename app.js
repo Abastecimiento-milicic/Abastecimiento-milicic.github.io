@@ -270,22 +270,35 @@ function updateKPIsMonthly(rows, months) {
   const cur = calcMonthTotals(rows, mes);
   const prev = prevMes ? calcMonthTotals(rows, prevMes) : null;
 
+  // ✅ NUEVO: Comprometidos (mes) = AT + FT + NO
+  const kpiTotalMesEl = document.getElementById("kpiTotalMes");
+  if (kpiTotalMesEl) kpiTotalMesEl.textContent = fmtInt(cur.total);
+
+  // AT mes
   document.getElementById("kpiATmes").textContent = fmtPct01(cur.pctAT);
   document.getElementById("kpiATmesSub").textContent =
     `Cant: ${fmtInt(cur.at)} · ${prev ? fmtDelta01(cur.pctAT - prev.pctAT) : "Sin mes anterior"}`;
 
+  // FT mes
   document.getElementById("kpiFTmes").textContent = fmtPct01(cur.pctFT);
   document.getElementById("kpiFTmesSub").textContent =
     `Cant: ${fmtInt(cur.ft)} · ${prev ? fmtDelta01(cur.pctFT - prev.pctFT) : "Sin mes anterior"}`;
 
+  // NO mes
   document.getElementById("kpiNOmes").textContent = fmtPct01(cur.pctNO);
   document.getElementById("kpiNOmesSub").textContent =
     `Cant: ${fmtInt(cur.no)} · ${prev ? fmtDelta01(cur.pctNO - prev.pctNO) : "Sin mes anterior"}`;
 
-  document.getElementById("kpiTOTmes").textContent = fmtPct01(cur.pctTOT);
-  document.getElementById("kpiTOTmesSub").textContent =
-    `Cant: ${fmtInt(cur.at + cur.ft)} · ${prev ? fmtDelta01(cur.pctTOT - prev.pctTOT) : "Sin mes anterior"}`;
+  // ENTREGADO TOTAL (AT+FT) mes (si lo estás mostrando en el KPI violeta)
+  const kpiTOTmesEl = document.getElementById("kpiTOTmes");
+  const kpiTOTmesSubEl = document.getElementById("kpiTOTmesSub");
+  if (kpiTOTmesEl) kpiTOTmesEl.textContent = fmtPct01(cur.pctTOT);
+  if (kpiTOTmesSubEl) {
+    kpiTOTmesSubEl.textContent =
+      `Cant: ${fmtInt(cur.at + cur.ft)} · ${prev ? fmtDelta01(cur.pctTOT - prev.pctTOT) : "Sin mes anterior"}`;
+  }
 }
+
 
 /* ============================
    CHART 1: 100% apilado
@@ -556,3 +569,4 @@ window.addEventListener("DOMContentLoaded", () => {
       showError("Error cargando CSV. Revisá que el nombre coincida y esté en la raíz del repo.");
     });
 });
+
