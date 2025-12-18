@@ -306,6 +306,150 @@ select:focus{
 .kpi-blue::before{ background: var(--blue); }
 .kpi-blue .kpi-icon{ background: rgba(29,78,216,.10); }
 
-.kpi-green
+.kpi-green::before{ background: var(--green); }
+.kpi-green .kpi-icon{ background: rgba(22,163,74,.10); }
 
+.kpi-amber::before{ background: var(--amber); }
+.kpi-amber .kpi-icon{ background: rgba(217,119,6,.12); }
+
+.kpi-red::before{ background: var(--red); }
+.kpi-red .kpi-icon{ background: rgba(220,38,38,.10); }
+
+/* Deltas */
+.delta-good{ color: var(--green) !important; }
+.delta-bad { color: var(--red)   !important; }
+.delta-neutral{ color: var(--green) !important; }
+
+/* ============================
+   CHART CARDS
+============================ */
+.chart-card{
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 12px 12px 14px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.chart-title{
+  font-weight: 950;
+  color: var(--brand);
+  letter-spacing:.9px;
+  text-transform: uppercase;
+  margin: 2px 4px 10px;
+  font-size: 12px;
+}
+.chart-wrap{
+  height: 360px;
+  width: 100%;
+}
+
+/* ============================
+   MM LAYOUT
+============================ */
+.mm-grid{
+  display:grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 14px;
+  align-items: start;
+}
+.mm-card{
+  border: var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  padding: 12px;
+}
+.mm-card-title{
+  font-weight: 950;
+  color: var(--brand);
+  letter-spacing:.9px;
+  text-transform: uppercase;
+  margin: 2px 4px 10px;
+  font-size: 12px;
+}
+.mm-donut{
+  height: 420px;
+}
+
+/* ============================
+   TABLE (más ejecutiva)
+============================ */
+.table-wrap{ overflow:auto; }
+
+.tbl{
+  width:100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-weight: 800;
+  background: #fff;
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.tbl thead th{
+  background: #0b1220;
+  color:#fff;
+  padding: 11px 10px;
+  text-align:left;
+  font-size: 12px;
+  letter-spacing:.6px;
+  text-transform: uppercase;
+}
+.tbl td{
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(2,8,20,.06);
+  font-size: 13px;
+  color: #0b1220;
+}
+.tbl td.num, .tbl th.num{ text-align:right; }
+
+.tbl tbody tr:nth-child(even){
+  background: rgba(2,8,20,.02);
+}
+.tbl tbody tr:hover{
+  background: rgba(11,90,70,.06);
+}
+.tbl tfoot td{
+  background: rgba(2,8,20,.04);
+  font-weight: 1000;
+}
+
+/* ============================
+   FOOTER
+============================ */
+.footnote{
+  margin-top: 12px;
+  color: var(--muted);
+  font-weight: 750;
+  font-size: 12px;
+}
+
+/* ============================
+   RESPONSIVE
+============================ */
+@media (max-width: 1100px){
+  .filters{ grid-template-columns: 1fr; }
+  .filters-mm{ grid-template-columns: 1fr; }
+  .kpi-grid{ grid-template-columns: 1fr 1fr; }
+  .kpi-grid-3{ grid-template-columns: 1fr; }
+  .mm-grid{ grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px){
+  .kpi-grid{ grid-template-columns: 1fr; }
+  .kpi-value{ font-size: 40px; }
+  .chart-wrap{ height: 320px; }
+  .mm-donut{ height: 360px; }
+}
+
+/* TV / Monitor obra */
+@media (min-width: 1600px){
+  .container{ max-width: 1700px; }
+  .kpi-value{ font-size: 54px; }
+  .kpi-sub-strong{ font-size: 18px; }
+  .chart-wrap{ height: 420px; }
+  .mm-donut{ height: 520px; }
+  .title{ font-size: 26px; }
+}
 
