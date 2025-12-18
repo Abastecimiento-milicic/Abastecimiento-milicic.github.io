@@ -39,14 +39,153 @@
          VISTA: CUMPLIMIENTO
          (tu app.js actual lo rellena)
     ========================== -->
-    <section id="view-cumplimiento" class="view">
-      <!-- Tu Cumplimiento ya lo tenés armado.
-           Si tu index actual tenía todo el HTML del dashboard, dejalo acá.
-           Si no, igual tu app.js puede renderizar. -->
-      <div class="hint">
-        Si ya tenías el HTML completo de Cumplimiento, pegalo dentro de este section (view-cumplimiento).
+  <div id="msg"></div>
+
+    <!-- FILTROS -->
+    <section class="panel">
+      <div class="panel-body filters">
+        <div class="filter">
+          <label>CLIENTE / OBRA</label>
+          <select id="clienteSelect">
+            <option value="">Todos</option>
+          </select>
+          <div id="clienteHint" class="hint">Columna cliente: -</div>
+        </div>
+
+        <div class="filter">
+          <label>MES DE ENTREGA</label>
+          <select id="mesSelect"></select>
+          <div id="mesHint" class="hint">Mes seleccionado: -</div>
+        </div>
+
+        <div class="filter">
+          <label>&nbsp;</label>
+          <button id="btnDownloadNO" class="btn">
+            ⬇ Descargar NO entregados
+          </button>
+          <div class="hint">Exporta CSV con “;”</div>
+        </div>
       </div>
     </section>
+
+    <!-- KPIs ACUMULADO -->
+    <section class="panel">
+      <div class="panel-title">CUMPLIMIENTO ACUMULADO (últimos 12 meses)</div>
+
+      <div class="panel-body kpi-grid">
+        <div class="kpi kpi-blue">
+          <div class="kpi-head">
+            <div class="kpi-title">COMPROMETIDOS</div>
+            <div class="kpi-icon">📦</div>
+          </div>
+          <div id="kpiTotal" class="kpi-value">-</div>
+          <div class="kpi-sub">AT + FT + No entregados</div>
+        </div>
+
+        <div class="kpi kpi-green">
+          <div class="kpi-head">
+            <div class="kpi-title">ENTREGADOS A TIEMPO</div>
+            <div class="kpi-icon">✓</div>
+          </div>
+          <div id="kpiATpct" class="kpi-value">-</div>
+          <div id="kpiATqty" class="kpi-sub kpi-sub-strong">Cantidad: -</div>
+        </div>
+
+        <div class="kpi kpi-amber">
+          <div class="kpi-head">
+            <div class="kpi-title">ENTREGADOS FUERA DE TIEMPO</div>
+            <div class="kpi-icon">⏱</div>
+          </div>
+          <div id="kpiFTpct" class="kpi-value">-</div>
+          <div id="kpiFTqty" class="kpi-sub kpi-sub-strong">Cantidad: -</div>
+        </div>
+
+        <div class="kpi kpi-red">
+          <div class="kpi-head">
+            <div class="kpi-title">NO ENTREGADOS</div>
+            <div class="kpi-icon">⚠</div>
+          </div>
+          <div id="kpiNOpct" class="kpi-value">-</div>
+          <div id="kpiNOqty" class="kpi-sub kpi-sub-strong">Cantidad: -</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KPIs MES -->
+    <section class="panel">
+      <div class="panel-title">CUMPLIMIENTO - MES SELECCIONADO</div>
+
+      <div class="panel-body kpi-grid kpi-grid-4">
+        <div class="kpi kpi-blue">
+          <div class="kpi-head">
+            <div class="kpi-title">COMPROMETIDOS (MES)</div>
+            <div class="kpi-icon">📦</div>
+          </div>
+          <div id="kpiTotalMes" class="kpi-value">-</div>
+          <div class="kpi-sub">Total del mes</div>
+        </div>
+
+        <div class="kpi kpi-green">
+          <div class="kpi-head">
+            <div class="kpi-title">% ENTREGADOS AT (MES)</div>
+            <div class="kpi-icon">✓</div>
+          </div>
+          <div id="kpiATmes" class="kpi-value">-</div>
+          <div id="kpiATmesSub" class="kpi-sub kpi-sub-strong"></div>
+        </div>
+
+        <div class="kpi kpi-amber">
+          <div class="kpi-head">
+            <div class="kpi-title">% ENTREGADOS FT (MES)</div>
+            <div class="kpi-icon">⏱</div>
+          </div>
+          <div id="kpiFTmes" class="kpi-value">-</div>
+          <div id="kpiFTmesSub" class="kpi-sub kpi-sub-strong"></div>
+        </div>
+
+        <div class="kpi kpi-red">
+          <div class="kpi-head">
+            <div class="kpi-title">% NO ENTREGADOS (MES)</div>
+            <div class="kpi-icon">⚠</div>
+          </div>
+          <div id="kpiNOmes" class="kpi-value">-</div>
+          <div id="kpiNOmesSub" class="kpi-sub kpi-sub-strong"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GRAFICO 100% APILADO -->
+    <section class="panel">
+      <div class="panel-title">CUMPLIMIENTO POR MES (100% APILADO)</div>
+      <div class="panel-body">
+        <div class="chart-card">
+          <div class="chart-title">Cantidad y % por mes</div>
+          <div class="chart-wrap">
+            <canvas id="chartMes"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TENDENCIA (ABAJO) -->
+    <section class="panel">
+      <div class="panel-title">TENDENCIA DE CUMPLIMIENTO</div>
+      <div class="panel-body">
+        <div class="chart-card">
+          <div class="chart-title">AT % / FT % / NO %</div>
+          <div class="chart-wrap">
+            <canvas id="chartTendencia"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+     <footer class="footnote">
+      Fuente: <b>CUMPLIMIENTO_2025.csv</b> (delimitador “;”) · Cálculo: AT/FT/NO por mes (FECHA ENTREGA ESPERADA).
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
 
     <!-- =========================
          VISTA: ANÁLISIS MM (DISPONIBILIDAD)
@@ -134,4 +273,5 @@
   <script src="router.js"></script>
 </body>
 </html>
+
 
