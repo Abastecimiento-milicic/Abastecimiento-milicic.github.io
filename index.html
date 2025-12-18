@@ -9,7 +9,7 @@
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- DataLabels (opcional, pero recomendado) -->
+  <!-- DataLabels (opcional) -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
 
@@ -18,9 +18,7 @@
     <div class="topbar-left">
       <div class="title">Control de Compras - Construcción</div>
       <div class="subtitle">Análisis de Cumplimiento de Pedidos por Obra</div>
-
-      <!-- ✅ STATUS (lo usa app.js) -->
-      <div id="status" class="status">Listo</div>
+      <div id="status" class="status">Cargando…</div>
     </div>
 
     <div class="topbar-right">
@@ -38,7 +36,6 @@
   </nav>
 
   <main class="container">
-    <!-- ✅ lugar para errores -->
     <div id="msg"></div>
 
     <!-- FILTROS -->
@@ -152,13 +149,13 @@
       </div>
     </section>
 
-    <!-- GRAFICO 100% APILADO -->
+    <!-- GRÁFICO 100% APILADO + LÍNEAS -->
     <section class="panel">
       <div class="panel-title">CUMPLIMIENTO POR MES (100% APILADO)</div>
       <div class="panel-body">
         <div class="chart-card">
           <div class="chart-title">Cantidad y % por mes</div>
-          <div class="chart-wrap">
+          <div class="chart-wrap chart-wrap-big">
             <canvas id="chartMes"></canvas>
           </div>
         </div>
@@ -179,11 +176,10 @@
     </section>
 
     <footer class="footnote">
-      Fuente: <b>CUMPLIMIENTO_2025.csv</b> (delimitador “;”) · Cálculo: AT/FT/NO por mes (FECHA ENTREGA ESPERADA).
+      Fuente: <b>CUMPLIMIENTO_2025.csv</b> (delimitador “;”).
     </footer>
   </main>
 
-  <!-- ✅ app.js al final -->
   <script src="app.js"></script>
 </body>
 </html>
