@@ -319,7 +319,7 @@ function updateKPIsMonthly(rows, months) {
 }
 
 /* ============================
-   CHART DEFAULTS (Power BI hover)
+   CHART DEFAULTS
 ============================ */
 function applyChartDefaults() {
   Chart.register(ChartDataLabels);
@@ -331,7 +331,6 @@ function applyChartDefaults() {
   Chart.defaults.interaction.mode = "index";
   Chart.defaults.interaction.intersect = false;
 
-  // Tooltip estilo “Power BI”
   Chart.defaults.plugins.tooltip.backgroundColor = "rgba(255,255,255,0.97)";
   Chart.defaults.plugins.tooltip.titleColor = COLORS.text;
   Chart.defaults.plugins.tooltip.bodyColor = COLORS.text;
@@ -342,7 +341,7 @@ function applyChartDefaults() {
 }
 
 /* ============================
-   CHART 1: 100% stacked bar
+   CHART 1
 ============================ */
 function buildChartMes(rows) {
   const agg = new Map();
@@ -429,7 +428,7 @@ function buildChartMes(rows) {
 }
 
 /* ============================
-   CHART 2: Trend lines (rectas + etiquetas %)
+   CHART 2
 ============================ */
 function buildChartTendencia(rows) {
   const agg = new Map();
@@ -475,36 +474,9 @@ function buildChartTendencia(rows) {
     data: {
       labels: months,
       datasets: [
-        {
-          label: "A Tiempo %",
-          data: pAT,
-          borderColor: COLORS.green,
-          backgroundColor: COLORS.green,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2
-        },
-        {
-          label: "Fuera Tiempo %",
-          data: pFT,
-          borderColor: COLORS.amber,
-          backgroundColor: COLORS.amber,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2
-        },
-        {
-          label: "No Entregados %",
-          data: pNO,
-          borderColor: COLORS.red,
-          backgroundColor: COLORS.red,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2
-        }
+        { label: "A Tiempo %", data: pAT, borderColor: COLORS.green, backgroundColor: COLORS.green, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
+        { label: "Fuera Tiempo %", data: pFT, borderColor: COLORS.amber, backgroundColor: COLORS.amber, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
+        { label: "No Entregados %", data: pNO, borderColor: COLORS.red, backgroundColor: COLORS.red, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 }
       ]
     },
     options: {
@@ -512,28 +484,12 @@ function buildChartTendencia(rows) {
       maintainAspectRatio: false,
       scales: {
         x: { grid: { color: "transparent" }, ticks: { color: COLORS.muted } },
-        y: {
-          beginAtZero: true,
-          max: 100,
-          grid: { color: COLORS.grid },
-          ticks: { color: COLORS.muted, callback: (v) => v + "%" }
-        }
+        y: { beginAtZero: true, max: 100, grid: { color: COLORS.grid }, ticks: { color: COLORS.muted, callback: (v) => v + "%" } }
       },
       plugins: {
         legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%`
-          }
-        },
-        datalabels: {
-          align: "top",
-          anchor: "end",
-          offset: 6,
-          formatter: (v) => `${Number(v).toFixed(0)}%`,
-          color: COLORS.text,
-          font: { size: 11, weight: "900" }
-        }
+        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%` } },
+        datalabels: { align: "top", anchor: "end", offset: 6, formatter: (v) => `${Number(v).toFixed(0)}%`, color: COLORS.text, font: { size: 11, weight: "900" } }
       }
     }
   });
@@ -663,4 +619,5 @@ window.addEventListener("DOMContentLoaded", () => {
       showError("Error cargando CSV. Revisá el nombre del archivo y que esté en la raíz del repo.");
     });
 });
+
 
