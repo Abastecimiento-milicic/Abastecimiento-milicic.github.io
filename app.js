@@ -67,6 +67,11 @@ function showError(msg) {
   if (el) el.innerHTML = `<div class="error">${msg}</div>`;
 }
 
+function clearMsg() {
+  const el = document.getElementById("msg");
+  if (el) el.innerHTML = "";
+}
+
 /* ============================
    DATE PARSING
    dd/mm/yyyy | dd-mm-yyyy | yyyy-mm-dd
@@ -298,6 +303,12 @@ function updateKPIsMonthly(rows, months) {
   const dFT = deltaInfo(cur.pctFT, prev.pctFT);
   const dNO = deltaInfo(cur.pctNO, prev.pctNO);
 
+  /*
+    REGLAS:
+    AT: baja = rojo, sube o se mantiene = verde
+    FT: sube o se mantiene = rojo, baja = verde
+    NO: sube = rojo, baja o se mantiene = verde
+  */
   let clsAT = "delta-good";
   if (dAT.diff < 0) clsAT = "delta-bad";
 
@@ -313,7 +324,7 @@ function updateKPIsMonthly(rows, months) {
 }
 
 /* ============================
-   CHART DEFAULTS
+   CHART DEFAULTS (Power BI hover)
 ============================ */
 function applyChartDefaults() {
   Chart.register(ChartDataLabels);
@@ -325,6 +336,7 @@ function applyChartDefaults() {
   Chart.defaults.interaction.mode = "index";
   Chart.defaults.interaction.intersect = false;
 
+  // Tooltip estilo “Power BI”
   Chart.defaults.plugins.tooltip.backgroundColor = "rgba(255,255,255,0.97)";
   Chart.defaults.plugins.tooltip.titleColor = COLORS.text;
   Chart.defaults.plugins.tooltip.bodyColor = COLORS.text;
@@ -335,7 +347,7 @@ function applyChartDefaults() {
 }
 
 /* ============================
-   CHART 1
+   CHART 1: 100% stacked bar
 ============================ */
 function buildChartMes(rows) {
   const agg = new Map();
@@ -422,7 +434,7 @@ function buildChartMes(rows) {
 }
 
 /* ============================
-   CHART 2
+   CHART 2: Trend lines (rectas + etiquetas %)
 ============================ */
 function buildChartTendencia(rows) {
   const agg = new Map();
@@ -468,9 +480,36 @@ function buildChartTendencia(rows) {
     data: {
       labels: months,
       datasets: [
-        { label: "A Tiempo %", data: pAT, borderColor: COLORS.green, backgroundColor: COLORS.green, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
-        { label: "Fuera Tiempo %", data: pFT, borderColor: COLORS.amber, backgroundColor: COLORS.amber, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
-        { label: "No Entregados %", data: pNO, borderColor: COLORS.red, backgroundColor: COLORS.red, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 }
+        {
+          label: "A Tiempo %",
+          data: pAT,
+          borderColor: COLORS.green,
+          backgroundColor: COLORS.green,
+          tension: 0,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBorderWidth: 2
+        },
+        {
+          label: "Fuera Tiempo %",
+          data: pFT,
+          borderColor: COLORS.amber,
+          backgroundColor: COLORS.amber,
+          tension: 0,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBorderWidth: 2
+        },
+        {
+          label: "No Entregados %",
+          data: pNO,
+          borderColor: COLORS.red,
+          backgroundColor: COLORS.red,
+          tension: 0,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBorderWidth: 2
+        }
       ]
     },
     options: {
@@ -478,11 +517,20 @@ function buildChartTendencia(rows) {
       maintainAspectRatio: false,
       scales: {
         x: { grid: { color: "transparent" }, ticks: { color: COLORS.muted } },
-        y: { beginAtZero: true, max: 100, grid: { color: COLORS.grid }, ticks: { color: COLORS.muted, callback: (v) => v + "%" } }
+        y: {
+          beginAtZero: true,
+          max: 100,
+          grid: { color: COLORS.grid },
+          ticks: { color: COLORS.muted, callback: (v) => v + "%" }
+        }
       },
       plugins: {
         legend: { position: "bottom" },
-        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%` } },
+        tooltip: {
+          callbacks: {
+            label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%`
+          }
+        },
         datalabels: {
           align: "top",
           anchor: "end",
@@ -547,7 +595,6 @@ function applyAll() {
 window.addEventListener("DOMContentLoaded", () => {
   applyChartDefaults();
 
-  // fecha “hoy”
   const d = new Date();
   document.getElementById("lastUpdate").textContent =
     `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
@@ -585,6 +632,9 @@ window.addEventListener("DOMContentLoaded", () => {
         return o;
       });
 
+      // ✅ si llegamos acá, está todo OK => limpiamos mensajes de error anteriores
+      clearMsg();
+
       document.getElementById("clienteHint").textContent = `Columna cliente: ${CLIENT_COL}`;
 
       renderClientes();
@@ -621,5 +671,6 @@ window.addEventListener("DOMContentLoaded", () => {
       showError("Error cargando CSV. Revisá el nombre del archivo y que esté en la raíz del repo.");
     });
 });
+
 
 
