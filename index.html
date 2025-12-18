@@ -3,274 +3,169 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Control de Compras - Construcción</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Abastecimiento - Milicic</title>
 
-  <!-- Chart.js (lo usa Cumplimiento y también MM para la dona) -->
+  <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
-
 <body>
   <header class="topbar">
-    <div class="topbar-left">
-      <div class="title">Control de Compras - Construcción</div>
-      <div class="subtitle">Análisis de Cumplimiento de Pedidos por Obra</div>
-      <div id="status" class="status">Listo</div>
+    <div>
+      <div class="title">ABASTECIMIENTO</div>
+      <div class="subtitle">Panel de control</div>
+      <div class="status" id="globalStatus">Listo</div>
     </div>
-
-    <div class="topbar-right">
-      <div class="update-box">
-        <div class="update-label">Última actualización</div>
-        <div id="lastUpdate" class="update-date">--/--/----</div>
-      </div>
+    <div class="update-box">
+      <div class="update-label">Última actualización</div>
+      <div class="update-date" id="lastUpdate">—</div>
     </div>
   </header>
 
-  <!-- Tabs (misma página, cambia vista) -->
   <nav class="tabs">
-    <button class="tab" data-view="mm">ANÁLISIS MM</button>
-    <button class="tab active" data-view="cumplimiento">CUMPLIMIENTO</button>
-    <button class="tab" data-view="demoras">DEMORAS</button>
+    <button class="tab active" id="tab-home" data-view="view-home">INICIO</button>
+    <button class="tab" id="tab-mm" data-view="view-mm">ANÁLISIS MM</button>
+    <button class="tab" id="tab-cump" data-view="view-cump">CUMPLIMIENTO</button>
   </nav>
 
   <main class="container">
 
-    <!-- =========================
-         VISTA: CUMPLIMIENTO
-         (tu app.js actual lo rellena)
-    ========================== -->
-  <div id="msg"></div>
-
-    <!-- FILTROS -->
-    <section class="panel">
-      <div class="panel-body filters">
-        <div class="filter">
-          <label>CLIENTE / OBRA</label>
-          <select id="clienteSelect">
-            <option value="">Todos</option>
-          </select>
-          <div id="clienteHint" class="hint">Columna cliente: -</div>
-        </div>
-
-        <div class="filter">
-          <label>MES DE ENTREGA</label>
-          <select id="mesSelect"></select>
-          <div id="mesHint" class="hint">Mes seleccionado: -</div>
-        </div>
-
-        <div class="filter">
-          <label>&nbsp;</label>
-          <button id="btnDownloadNO" class="btn">
-            ⬇ Descargar NO entregados
-          </button>
-          <div class="hint">Exporta CSV con “;”</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- KPIs ACUMULADO -->
-    <section class="panel">
-      <div class="panel-title">CUMPLIMIENTO ACUMULADO (últimos 12 meses)</div>
-
-      <div class="panel-body kpi-grid">
-        <div class="kpi kpi-blue">
-          <div class="kpi-head">
-            <div class="kpi-title">COMPROMETIDOS</div>
-            <div class="kpi-icon">📦</div>
-          </div>
-          <div id="kpiTotal" class="kpi-value">-</div>
-          <div class="kpi-sub">AT + FT + No entregados</div>
-        </div>
-
-        <div class="kpi kpi-green">
-          <div class="kpi-head">
-            <div class="kpi-title">ENTREGADOS A TIEMPO</div>
-            <div class="kpi-icon">✓</div>
-          </div>
-          <div id="kpiATpct" class="kpi-value">-</div>
-          <div id="kpiATqty" class="kpi-sub kpi-sub-strong">Cantidad: -</div>
-        </div>
-
-        <div class="kpi kpi-amber">
-          <div class="kpi-head">
-            <div class="kpi-title">ENTREGADOS FUERA DE TIEMPO</div>
-            <div class="kpi-icon">⏱</div>
-          </div>
-          <div id="kpiFTpct" class="kpi-value">-</div>
-          <div id="kpiFTqty" class="kpi-sub kpi-sub-strong">Cantidad: -</div>
-        </div>
-
-        <div class="kpi kpi-red">
-          <div class="kpi-head">
-            <div class="kpi-title">NO ENTREGADOS</div>
-            <div class="kpi-icon">⚠</div>
-          </div>
-          <div id="kpiNOpct" class="kpi-value">-</div>
-          <div id="kpiNOqty" class="kpi-sub kpi-sub-strong">Cantidad: -</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- KPIs MES -->
-    <section class="panel">
-      <div class="panel-title">CUMPLIMIENTO - MES SELECCIONADO</div>
-
-      <div class="panel-body kpi-grid kpi-grid-4">
-        <div class="kpi kpi-blue">
-          <div class="kpi-head">
-            <div class="kpi-title">COMPROMETIDOS (MES)</div>
-            <div class="kpi-icon">📦</div>
-          </div>
-          <div id="kpiTotalMes" class="kpi-value">-</div>
-          <div class="kpi-sub">Total del mes</div>
-        </div>
-
-        <div class="kpi kpi-green">
-          <div class="kpi-head">
-            <div class="kpi-title">% ENTREGADOS AT (MES)</div>
-            <div class="kpi-icon">✓</div>
-          </div>
-          <div id="kpiATmes" class="kpi-value">-</div>
-          <div id="kpiATmesSub" class="kpi-sub kpi-sub-strong"></div>
-        </div>
-
-        <div class="kpi kpi-amber">
-          <div class="kpi-head">
-            <div class="kpi-title">% ENTREGADOS FT (MES)</div>
-            <div class="kpi-icon">⏱</div>
-          </div>
-          <div id="kpiFTmes" class="kpi-value">-</div>
-          <div id="kpiFTmesSub" class="kpi-sub kpi-sub-strong"></div>
-        </div>
-
-        <div class="kpi kpi-red">
-          <div class="kpi-head">
-            <div class="kpi-title">% NO ENTREGADOS (MES)</div>
-            <div class="kpi-icon">⚠</div>
-          </div>
-          <div id="kpiNOmes" class="kpi-value">-</div>
-          <div id="kpiNOmesSub" class="kpi-sub kpi-sub-strong"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- GRAFICO 100% APILADO -->
-    <section class="panel">
-      <div class="panel-title">CUMPLIMIENTO POR MES (100% APILADO)</div>
-      <div class="panel-body">
-        <div class="chart-card">
-          <div class="chart-title">Cantidad y % por mes</div>
-          <div class="chart-wrap">
-            <canvas id="chartMes"></canvas>
+    <!-- INICIO -->
+    <section class="view" id="view-home">
+      <div class="panel">
+        <div class="panel-title">Inicio</div>
+        <div class="panel-body">
+          <div class="hint">
+            Usá las pestañas para ver <b>ANÁLISIS MM</b> (archivo <b>ANALISIS-MM.csv</b>) y <b>CUMPLIMIENTO</b> (archivo <b>CUMPLIMIENTO.csv</b>).
           </div>
         </div>
       </div>
     </section>
 
-    <!-- TENDENCIA (ABAJO) -->
-    <section class="panel">
-      <div class="panel-title">TENDENCIA DE CUMPLIMIENTO</div>
-      <div class="panel-body">
-        <div class="chart-card">
-          <div class="chart-title">AT % / FT % / NO %</div>
-          <div class="chart-wrap">
-            <canvas id="chartTendencia"></canvas>
-          </div>
-        </div>
-      </div>
-    </section>
-
-     <footer class="footnote">
-      Fuente: <b>CUMPLIMIENTO_2025.csv</b> (delimitador “;”) · Cálculo: AT/FT/NO por mes (FECHA ENTREGA ESPERADA).
-    </footer>
-  </main>
-
-  <script src="app.js"></script>
-
-    <!-- =========================
-         VISTA: ANÁLISIS MM (DISPONIBILIDAD)
-         (sin "primeras filas")
-    ========================== -->
-    <section id="view-mm" class="view hidden">
-
+    <!-- ANÁLISIS MM -->
+    <section class="view hidden" id="view-mm">
       <div class="mm-topbar">
-        <div class="mm-title">DISPONIBILIDAD</div>
+        <div class="mm-title">ANÁLISIS MM — DISPONIBILIDAD</div>
       </div>
 
-      <section class="mm-layout">
-
+      <div class="mm-layout">
         <!-- IZQUIERDA -->
         <div class="mm-left">
           <div class="mm-filter-card">
             <div class="mm-filter-head">CLIENTE</div>
             <div class="mm-filter-body">
-              <select id="mmClienteSelect" class="mm-select">
-                <option value="">Todos</option>
-              </select>
-
-              <div id="mmStatus" class="mm-hint">Listo</div>
-
-              <button id="mmReload" class="btn mm-btn">↻ Recargar archivo</button>
+              <select class="mm-select" id="mmCliente"></select>
+              <div class="mm-hint">Cliente = columna <b>ALMACEN</b></div>
+              <button class="btn mm-btn" id="mmRefresh">Actualizar</button>
+              <div class="mm-hint" id="mmStatus">—</div>
             </div>
           </div>
 
-          <div id="mmTablaEstados" class="mm-table-wrap"></div>
+          <div class="mm-table-wrap">
+            <table class="mm-table" id="mmEstadosTable">
+              <thead>
+                <tr>
+                  <th>ESTADOS</th>
+                  <th class="num">MATERIALES</th>
+                  <th class="num">LIBRE UTILIZACIÓN</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <td>TOTAL</td>
+                  <td class="num" id="mmTotMat">0</td>
+                  <td class="num" id="mmTotLibre">0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="footnote">
+            * Materiales = distintos por estado. Libre Utilización = suma (solo para mostrar referencia).
+          </div>
         </div>
 
         <!-- DERECHA -->
         <div class="mm-right">
           <div class="mm-kpi-row">
             <div class="mm-kpi">
-              <div class="mm-kpi-head">CANT MATERIALES</div>
-              <div id="mmKpiTotal" class="mm-kpi-val">-</div>
+              <div class="mm-kpi-head">Cantidad de materiales</div>
+              <div class="mm-kpi-val" id="kpiMat">0</div>
             </div>
-
             <div class="mm-kpi">
-              <div class="mm-kpi-head">CANT DISPONIBLE</div>
-              <div id="mmKpiDisp" class="mm-kpi-val">-</div>
+              <div class="mm-kpi-head">Cantidad disponible</div>
+              <div class="mm-kpi-val" id="kpiDisp">0</div>
             </div>
-
             <div class="mm-kpi">
-              <div class="mm-kpi-head">DISPONIBLE</div>
-              <div id="mmKpiPct" class="mm-kpi-val">-</div>
+              <div class="mm-kpi-head">Disponible</div>
+              <div class="mm-kpi-val" id="kpiPct">0%</div>
             </div>
           </div>
 
           <div class="mm-donut-card">
+            <div class="mm-hint" style="margin-bottom:10px;">Distribución por estado</div>
             <div class="mm-donut-wrap">
               <canvas id="mmDonut"></canvas>
             </div>
           </div>
-        </div>
-      </section>
 
-      <footer class="footnote">
-        Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”).
-      </footer>
+          <div class="panel">
+            <div class="panel-title">Vista previa (primeras 10 filas filtradas)</div>
+            <div class="panel-body">
+              <div class="mm-hint" id="mmPreviewHint">—</div>
+              <div style="overflow:auto;">
+                <table class="mm-table" id="mmPreviewTable">
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </section>
 
-    <!-- =========================
-         VISTA: DEMORAS (placeholder)
-    ========================== -->
-    <section id="view-demoras" class="view hidden">
-      <section class="panel">
-        <div class="panel-title">DEMORAS</div>
+    <!-- CUMPLIMIENTO -->
+    <section class="view hidden" id="view-cump">
+      <div class="panel">
+        <div class="panel-title">CUMPLIMIENTO</div>
         <div class="panel-body">
-          <div class="hint">Acá después conectamos DEMORAS.csv y sus KPIs/gráficos.</div>
+
+          <div class="cump-controls">
+            <div class="cump-control">
+              <div class="cump-label">Filtro (si existe columna PROYECTO / OBRA / ALMACEN)</div>
+              <select class="cump-select" id="cumpFiltro"></select>
+            </div>
+
+            <button class="btn" id="cumpRefresh">Actualizar</button>
+
+            <div class="cump-msg" id="cumpStatus">—</div>
+          </div>
+
+          <div class="panel" style="margin-top:14px;">
+            <div class="panel-title">Vista previa (primeras 30 filas filtradas)</div>
+            <div class="panel-body">
+              <div style="overflow:auto;">
+                <table class="mm-table" id="cumpTable">
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="footnote">
+            Si querés que Cumplimiento muestre KPIs específicos (entregados a término, vencidos, %), decime qué columnas exactas trae tu <b>CUMPLIMIENTO.csv</b>.
+          </div>
+
         </div>
-      </section>
+      </div>
     </section>
 
   </main>
 
-  <!-- Tu cumplimiento actual -->
   <script src="app.js"></script>
-
-  <!-- Nuevo MM -->
-  <script src="mm.js"></script>
-
-  <!-- Router tabs -->
-  <script src="router.js"></script>
 </body>
 </html>
 
