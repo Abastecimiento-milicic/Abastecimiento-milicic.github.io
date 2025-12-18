@@ -364,7 +364,7 @@ function buildChartMes(rows) {
     c.no += toNumber(r[NO_COL]);
 
     const dd = toNumber(r[DEMORA_COL]);
-    if (dd > 0 || clean(r[DEMORA_COL]) !== "") {
+    if (clean(r[DEMORA_COL]) !== "") {
       c.demoraSum += dd;
       c.demoraCnt += 1;
     }
@@ -385,13 +385,11 @@ function buildChartMes(rows) {
     return c.demoraSum / c.demoraCnt;
   });
 
-  // Escala derecha: incluir línea fija de 7
   const maxDemora = Math.max(7, ...demoraAvg, 0);
   const suggestedMaxY2 = Math.ceil(maxDemora * 1.25);
 
-  // Líneas constantes
-  const line75 = months.map(() => 75); // eje izquierdo (%)
-  const line7  = months.map(() => 7);  // eje derecho (días)
+  const line75 = months.map(() => 75);
+  const line7  = months.map(() => 7);
 
   const canvas = document.getElementById("chartMes");
   if (!canvas) return;
@@ -403,57 +401,60 @@ function buildChartMes(rows) {
     data: {
       labels: months,
       datasets: [
-        // barras
-        { label: "Entregados AT", data: pAT, _q: qAT, stack:"s", backgroundColor: COLORS.green, yAxisID: "y" },
-        { label: "Entregados FT", data: pFT, _q: qFT, stack:"s", backgroundColor: COLORS.amber, yAxisID: "y" },
-        { label: "No entregados", data: pNO, _q: qNO, stack:"s", backgroundColor: COLORS.red, yAxisID: "y" },
+        // BARRAS (order bajo)
+        { label: "Entregados AT", data: pAT, _q: qAT, stack:"s", backgroundColor: COLORS.green, yAxisID: "y", order: 1 },
+        { label: "Entregados FT", data: pFT, _q: qFT, stack:"s", backgroundColor: COLORS.amber, yAxisID: "y", order: 1 },
+        { label: "No entregados", data: pNO, _q: qNO, stack:"s", backgroundColor: COLORS.red, yAxisID: "y", order: 1 },
 
-        // 75% constante (verde oscuro, punteada) eje izquierdo
+        // LÍNEA 75% (order alto -> arriba de barras)
         {
           type: "line",
           label: "Meta 75%",
           data: line75,
           yAxisID: "y",
           borderColor: COLORS.greenDark,
-          borderWidth: 2,
+          borderWidth: 3,
           borderDash: [6, 6],
           pointRadius: 0,
           tension: 0,
+          order: 10,
           datalabels: { display: false }
         },
 
-        // Demora promedio (eje derecho)
+        // Demora promedio (order alto -> arriba de barras)
         {
           type: "line",
           label: "Prom. días de demora",
           data: demoraAvg,
           yAxisID: "y2",
-          borderColor: "#ff00b8",   // similar al magenta de tu ejemplo Power BI
+          borderColor: "#ff00b8",
           backgroundColor: "#ff00b8",
           borderWidth: 3,
           pointRadius: 3,
           pointHoverRadius: 5,
           tension: 0,
+          order: 11,
           datalabels: {
             align: "top",
             anchor: "end",
-            formatter: (v) => v ? Math.round(v).toString() : "",
+            formatter: (v) => (v || v === 0) ? Math.round(v).toString() : "",
             color: COLORS.text,
             font: { size: 11, weight: "900" }
           }
         },
 
-        // Línea constante 7 (roja punteada) eje derecho
+        // LÍMITE 7 días (order alto -> arriba de barras)
         {
           type: "line",
           label: "Límite 7 días",
           data: line7,
           yAxisID: "y2",
           borderColor: COLORS.red,
-          borderWidth: 2,
+          borderWidth: 3,
           borderDash: [6, 6],
           pointRadius: 0,
           tension: 0,
+          order: 12,
           datalabels: { display: false }
         },
       ]
@@ -463,19 +464,31 @@ function buildChartMes(rows) {
       maintainAspectRatio: false,
       scales: {
         x: { stacked:true, grid:{ color:"transparent" }, ticks:{ color: COLORS.muted } },
+
+        // EJE IZQUIERDO: resaltar tick 75
         y: {
           stacked:true,
           beginAtZero:true,
           max:100,
           grid:{ color: COLORS.grid },
-          ticks:{ color: COLORS.muted, callback:(v)=> v + "%" }
+          ticks:{
+            callback:(v)=> v + "%",
+            color: (ctx) => (Number(ctx.tick?.value) === 75 ? COLORS.greenDark : COLORS.muted),
+            font:  (ctx) => (Number(ctx.tick?.value) === 75 ? { weight: "900" } : { weight: "700" })
+          }
         },
+
+        // EJE DERECHO: resaltar tick 7
         y2: {
           position: "right",
           beginAtZero: true,
           suggestedMax: suggestedMaxY2,
-          grid: { drawOnChartArea: false }, // no ensucia la grilla del %
-          ticks: { color: COLORS.red }, // como en Power BI (eje derecho rojo)
+          grid: { drawOnChartArea: false },
+          ticks: {
+            callback: (v) => v,
+            color: (ctx) => (Number(ctx.tick?.value) === 7 ? COLORS.red : COLORS.red),
+            font:  (ctx) => (Number(ctx.tick?.value) === 7 ? { weight: "900" } : { weight: "700" })
+          },
           title: { display: true, text: "días de demora", color: COLORS.red, font: { weight: "900" } }
         }
       },
@@ -484,13 +497,11 @@ function buildChartMes(rows) {
         tooltip: {
           callbacks: {
             label: (c) => {
-              // Barras
               if (c.dataset.type !== "line" && c.dataset.stack) {
                 const pct = (c.parsed.y ?? 0).toFixed(1).replace(".", ",");
                 const qty = c.dataset._q?.[c.dataIndex] ?? 0;
                 return ` ${c.dataset.label}: ${fmtInt(qty)} (${pct}%)`;
               }
-              // Líneas
               if (c.dataset.yAxisID === "y2") {
                 return ` ${c.dataset.label}: ${Number(c.parsed.y ?? 0).toFixed(1).replace(".", ",")} días`;
               }
@@ -499,11 +510,9 @@ function buildChartMes(rows) {
           }
         },
         datalabels: {
-          // etiquetas SOLO en barras (no en líneas) y solo si el segmento es “visible”
           formatter: (v, ctx) => {
             const isLine = ctx.dataset.type === "line";
             if (isLine) return "";
-
             const qty = ctx.dataset._q?.[ctx.dataIndex] ?? 0;
             if (!qty || v < 7) return "";
             return `${fmtInt(qty)} (${v.toFixed(0)}%)`;
@@ -518,6 +527,7 @@ function buildChartMes(rows) {
     }
   });
 }
+
 
 /* ============================
    CHART 2: Trend lines (rectas + etiquetas %)
@@ -720,6 +730,7 @@ window.addEventListener("DOMContentLoaded", () => {
       showError("Error cargando CSV. Revisá el nombre del archivo y que esté en la raíz del repo.");
     });
 });
+
 
 
 
