@@ -1,43 +1,35 @@
 /* ============================
-   CONFIG
+   DEMORAS - CONFIG
 ============================ */
-const csvUrl = "DEMORAS.csv";
+const csvUrl = "DEMORAS.csv";   // OJO: nombre EXACTO del repo
 const DELIM = ";";
 
-// posibles nombres de columnas
-const CLIENT_CANDIDATES = ["CLIENTE", "CLIENTE / OBRA", "CLIENTE / OBRA ", "OBRA", "ALMACEN", "ALMACÉN"];
-const MES_CANDIDATES = ["MES", "Mes", "MES DEMORA", "MES ENTREGA", "MES_ENTREGA", "MES DEMORAS"];
-const FECHA_CANDIDATES = ["FECHA", "FECHA ENTREGA", "FECHA ENTREGA ESPERADA", "FECHA OC", "FECHA CONTABILIZACION", "FECHA CONTABILIZACIÓN"];
+// candidatos para detectar columnas
+const CLIENT_CANDIDATES = ["CLIENTE", "CLIENTE / OBRA", "CLIENTE NRO.", "OBRA", "ALMACEN", "ALMACÉN"];
+const MES_CANDIDATES = ["MES", "Mes", "MES ENTREGA", "MES DE ENTREGA"];
+const FECHA_CANDIDATES = [
+  "FECHA", "Fecha", "FECHA ENTREGA", "Fecha entrega",
+  "FECHA ENTREGA ESPERADA", "FECHA ENTREGA OC", "Fecha OC"
+];
 
-// áreas que querés mostrar (se toman como columnas si existen)
-const AREA_ORDER = [
-  "PROYECTO",
+// áreas “esperadas” (las que me pasaste)
+const AREA_EXPECTED = [
   "CADENA DE SUMINISTRO",
-  "ALMACÉN",
   "ALMACEN",
-  "BLEND",
+  "ALMACÉN",
+  "BLEN",
   "EQUIPOS MENORES",
   "COMPRAS",
   "COMPRAS EQUIPOS",
-  "COMPRAS AGV"
+  "COMPRAS AGV",
+  "TOTAL"
 ];
-
-/* ============================
-   COLORES / UI
-============================ */
-const COLORS = {
-  grid:  "rgba(15, 23, 42, 0.10)",
-  text:  "#0b1220",
-  muted: "#526172",
-  brand: "#0b5a46",
-  line:  "#ef4444"
-};
 
 /* ============================
    GLOBAL
 ============================ */
-let headers = [];
 let data = [];
+let headers = [];
 
 let CLIENT_COL = null;
 let MES_COL = null;
@@ -45,16 +37,19 @@ let FECHA_COL = null;
 let AREA_COLS = [];
 
 let chartMes = null;
-let chartArea = null;
+let chartAreas = null;
 
 /* ============================
    HELPERS
 ============================ */
 const clean = (v) => (v ?? "").toString().trim();
 
-function showError(msg) {
-  const el = document.getElementById("msg");
-  if (el) el.innerHTML = `<div class="error">${msg}</div>`;
+function norm(s) {
+  return clean(s)
+    .toUpperCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // sin acentos
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function toNumber(v) {
@@ -66,6 +61,69 @@ function toNumber(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function isTruthyAreaValue(v) {
+  const t = clean(v);
+  if (!t) return false;
+  if (t === "0") return false;
+  // si viene "X" o "SI" o "1" o "2" etc.
+  if (["NO", "FALSE"].includes(norm(t))) return false;
+  return true;
+}
+
+function fmtInt(n) {
+  return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+}
+
+function fmtPct01(x) {
+  if (!isFinite(x)) return "-";
+  return (x * 100).toFixed(1).replace(".", ",") + "%";
+}
+
+function showError(msg) {
+  const el = document.getElementById("msg");
+  if (el) el.innerHTML = `<div class="error">${msg}</div>`;
+}
+
+/* ============================
+   DATE / MONTH
+============================ */
+function parseDateAny(s) {
+  const t = clean(s);
+  if (!t) return null;
+
+  // dd/mm/yyyy o dd-mm-yyyy
+  let m = t.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+
+  // yyyy-mm-dd
+  m = t.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+
+  return null;
+}
+
+function monthKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getMonthKeyFromRow(r) {
+  // 1) si hay MES explícito
+  if (MES_COL) {
+    const m = clean(r[MES_COL]);
+    // admite "2025-11" o "noviembre" etc → si no es yyyy-mm lo dejamos como texto
+    return m || null;
+  }
+  // 2) si hay FECHA
+  if (FECHA_COL) {
+    const d = parseDateAny(r[FECHA_COL]);
+    return d ? monthKey(d) : null;
+  }
+  return null;
+}
+
+/* ============================
+   CSV PARSER (quotes safe)
+============================ */
 function parseDelimited(text, delimiter = ";") {
   const rows = [];
   let row = [];
@@ -105,114 +163,57 @@ function parseDelimited(text, delimiter = ";") {
   return rows;
 }
 
-function parseDateAny(s) {
-  const t = clean(s);
-  if (!t) return null;
-
-  let m = t.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
-
-  m = t.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
-  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
-
-  return null;
-}
-
-function monthKeyFromDate(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function normalize(s) {
-  return clean(s)
-    .toUpperCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // saca acentos
-}
-
-function sortMonths(labels) {
-  // si son yyyy-mm, ordenar directo
-  const allYyyyMm = labels.every(x => /^\d{4}-\d{2}$/.test(x));
-  if (allYyyyMm) return [...labels].sort();
-
-  // si son nombres de mes
-  const order = {
-    ENERO:1, FEBRERO:2, MARZO:3, ABRIL:4, MAYO:5, JUNIO:6,
-    JULIO:7, AGOSTO:8, SEPTIEMBRE:9, OCTUBRE:10, NOVIEMBRE:11, DICIEMBRE:12
-  };
-
-  return [...labels].sort((a,b)=>{
-    const aa = normalize(a);
-    const bb = normalize(b);
-    const oa = order[aa] ?? 999;
-    const ob = order[bb] ?? 999;
-    if (oa !== ob) return oa - ob;
-    return a.localeCompare(b, "es");
-  });
-}
-
 /* ============================
-   DETECTORS
+   DETECT COLUMNS
 ============================ */
 function detectColumns() {
-  const H = headers;
-
-  CLIENT_COL =
-    CLIENT_CANDIDATES.find(c => H.includes(c)) ||
-    H.find(h => normalize(h).includes("CLIENTE")) ||
-    H.find(h => normalize(h).includes("OBRA")) ||
-    null;
-
-  MES_COL =
-    MES_CANDIDATES.find(c => H.includes(c)) ||
-    H.find(h => normalize(h) === "MES") ||
-    null;
-
-  FECHA_COL =
-    FECHA_CANDIDATES.find(c => H.includes(c)) ||
-    H.find(h => normalize(h).includes("FECHA")) ||
-    null;
-
-  // columnas de áreas: usamos AREA_ORDER si existen como headers (con o sin acento)
-  const byNorm = new Map(H.map(h => [normalize(h), h]));
-  const cols = [];
-  for (const a of AREA_ORDER) {
-    const real = byNorm.get(normalize(a));
-    if (real) cols.push(real);
-  }
-
-  // fallback: si no detecta ninguna, buscar columnas que parezcan áreas por nombre (sin mes/cliente/fecha)
-  if (!cols.length) {
-    const excluded = new Set([CLIENT_COL, MES_COL, FECHA_COL].filter(Boolean));
-    for (const h of H) {
-      if (excluded.has(h)) continue;
-      // nos quedamos con columnas “cortas” y tipo área (heurística)
-      const n = normalize(h);
-      if (n.includes("COMPRAS") || n.includes("PROYECTO") || n.includes("BLEND") || n.includes("ALMACEN") || n.includes("EQUIPOS")) {
-        cols.push(h);
-      }
+  const hNorm = headers.map(norm);
+  const findCol = (cands) => {
+    for (const c of cands) {
+      const idx = hNorm.indexOf(norm(c));
+      if (idx >= 0) return headers[idx];
     }
+    return null;
+  };
+
+  CLIENT_COL = findCol(CLIENT_CANDIDATES);
+  MES_COL = findCol(MES_CANDIDATES);
+  FECHA_COL = findCol(FECHA_CANDIDATES);
+
+  // áreas: 1) por lista esperada 2) si no, por heurística (columnas que coinciden con “AREA_EXPECTED”)
+  const expectedNorm = new Set(AREA_EXPECTED.map(norm));
+  const found = [];
+
+  for (const h of headers) {
+    const hn = norm(h);
+    if (expectedNorm.has(hn)) found.push(h);
   }
 
-  AREA_COLS = cols;
+  // sacamos TOTAL si existe (no la queremos como área en gráficos)
+  AREA_COLS = found.filter(c => norm(c) !== "TOTAL");
+
+  // si no encontró nada, fallback: buscar columnas que contengan palabras clave típicas
+  if (!AREA_COLS.length) {
+    const keys = ["COMPRAS", "ALMACEN", "CADENA", "EQUIPOS", "BLEN", "AGV", "PROYECTO"];
+    AREA_COLS = headers.filter(h => keys.some(k => norm(h).includes(k)));
+  }
 }
 
 /* ============================
-   FILTERED ROWS
+   FILTERS
 ============================ */
-function rowsByCliente() {
-  const c = document.getElementById("clienteSelect")?.value || "";
+function filteredRows() {
+  const sel = document.getElementById("clienteSelect");
+  const c = sel ? sel.value : "";
   if (!c || !CLIENT_COL) return data;
   return data.filter(r => clean(r[CLIENT_COL]) === c);
 }
 
-function getRowMonth(r) {
-  if (MES_COL && clean(r[MES_COL])) return clean(r[MES_COL]);
-
-  if (FECHA_COL) {
-    const d = parseDateAny(r[FECHA_COL]);
-    if (d) return monthKeyFromDate(d);
-  }
-
-  return null;
+function filteredRowsByClienteYMes() {
+  const rows = filteredRows();
+  const mes = document.getElementById("mesSelect")?.value || "";
+  if (!mes) return rows;
+  return rows.filter(r => getMonthKeyFromRow(r) === mes);
 }
 
 /* ============================
@@ -223,6 +224,8 @@ function renderClientes() {
   if (!sel) return;
 
   sel.querySelectorAll("option:not([value=''])").forEach(o => o.remove());
+
+  if (!CLIENT_COL) return;
 
   const clientes = [...new Set(data.map(r => clean(r[CLIENT_COL])).filter(Boolean))]
     .sort((a,b) => a.localeCompare(b, "es"));
@@ -235,65 +238,101 @@ function renderClientes() {
   }
 }
 
-function renderMeses(rows) {
+function buildMesSelect(rows) {
   const sel = document.getElementById("mesSelect");
   if (!sel) return [];
 
-  const months = [...new Set(rows.map(getRowMonth).filter(Boolean))];
-  const sorted = sortMonths(months);
+  const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))]
+    .sort((a,b)=> a.localeCompare(b, "es"));
 
   const prev = sel.value;
+
   sel.innerHTML = "";
-  for (const m of sorted) {
+  for (const m of months) {
     const o = document.createElement("option");
     o.value = m;
     o.textContent = m;
     sel.appendChild(o);
   }
 
-  sel.value = sorted.includes(prev) ? prev : (sorted[sorted.length - 1] || "");
+  sel.value = months.includes(prev) ? prev : (months[months.length - 1] || "");
 
   const hint = document.getElementById("mesHint");
   if (hint) hint.textContent = sel.value ? `Mes seleccionado: ${sel.value}` : "Sin meses";
 
-  return sorted;
+  return months;
 }
 
 /* ============================
-   AGGREGATIONS
+   AGG CALCS
 ============================ */
-function sumAreas(r) {
-  let t = 0;
-  for (const c of AREA_COLS) t += toNumber(r[c]);
-  return t;
+function countDemoras(rows) {
+  // 1 fila = 1 pedido con demora
+  return rows.length;
 }
 
 function aggByMonth(rows) {
-  const map = new Map();
+  const m = new Map();
   for (const r of rows) {
-    const m = getRowMonth(r);
-    if (!m) continue;
-    map.set(m, (map.get(m) ?? 0) + sumAreas(r));
+    const mk = getMonthKeyFromRow(r);
+    if (!mk) continue;
+    m.set(mk, (m.get(mk) || 0) + 1);
   }
-  return map;
+  const months = [...m.keys()].sort();
+  const counts = months.map(k => m.get(k) || 0);
+  return { months, counts };
 }
 
-function aggByAreaForMonth(rows, month) {
-  const map = new Map();
-  for (const c of AREA_COLS) map.set(c, 0);
+function aggAreas(rows) {
+  const out = new Map();
+  for (const a of AREA_COLS) out.set(a, 0);
 
   for (const r of rows) {
-    const m = getRowMonth(r);
-    if (m !== month) continue;
-    for (const c of AREA_COLS) {
-      map.set(c, (map.get(c) ?? 0) + toNumber(r[c]));
+    for (const a of AREA_COLS) {
+      if (isTruthyAreaValue(r[a])) out.set(a, (out.get(a) || 0) + 1);
     }
   }
-  return map;
+  return out;
 }
 
-function fmtInt(n) {
-  return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+function topArea(areaMap) {
+  let best = null;
+  let bestVal = -1;
+  let total = 0;
+
+  for (const [k,v] of areaMap.entries()) {
+    total += v;
+    if (v > bestVal) { bestVal = v; best = k; }
+  }
+  return { best, bestVal, total };
+}
+
+/* ============================
+   KPIs UI
+============================ */
+function updateKPIs() {
+  const rowsMes = filteredRowsByClienteYMes();
+  const dem = countDemoras(rowsMes);
+
+  document.getElementById("kpiDemorasMes").textContent = fmtInt(dem);
+
+  const areaMap = aggAreas(rowsMes);
+  const t = topArea(areaMap);
+
+  if (!t.best || dem === 0) {
+    document.getElementById("kpiTopArea").textContent = "-";
+    document.getElementById("kpiTopAreaSub").textContent = "-";
+    document.getElementById("kpiTopPct").textContent = "-";
+    return;
+  }
+
+  // % sobre demoras del mes (si hay varias áreas por pedido, esto es “share de marcas de área”)
+  // para un “share” más PowerBI, usamos total de marcas
+  const pct = t.total ? (t.bestVal / t.total) : NaN;
+
+  document.getElementById("kpiTopArea").textContent = t.best;
+  document.getElementById("kpiTopAreaSub").textContent = `Cant: ${fmtInt(t.bestVal)}`;
+  document.getElementById("kpiTopPct").textContent = fmtPct01(pct);
 }
 
 /* ============================
@@ -301,23 +340,30 @@ function fmtInt(n) {
 ============================ */
 function applyChartDefaults() {
   Chart.register(ChartDataLabels);
-  Chart.defaults.color = COLORS.text;
+
+  Chart.defaults.color = "#0b1220";
   Chart.defaults.font.family = '"Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif';
   Chart.defaults.font.weight = "800";
+
   Chart.defaults.interaction.mode = "index";
   Chart.defaults.interaction.intersect = false;
+
+  Chart.defaults.plugins.tooltip.backgroundColor = "rgba(255,255,255,0.97)";
+  Chart.defaults.plugins.tooltip.titleColor = "#0b1220";
+  Chart.defaults.plugins.tooltip.bodyColor = "#0b1220";
+  Chart.defaults.plugins.tooltip.borderColor = "rgba(2,8,20,.18)";
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.padding = 10;
 }
 
 /* ============================
-   RENDER: BAR + LINE (mes)
+   CHARTS
 ============================ */
-function buildChartMes(rows, monthsSorted) {
-  const map = aggByMonth(rows);
+function buildChartMes() {
+  const rows = filteredRows();
+  const { months, counts } = aggByMonth(rows);
 
-  const labels = monthsSorted.filter(m => map.has(m));
-  const values = labels.map(m => map.get(m) ?? 0);
-
-  const canvas = document.getElementById("chartDemorasMes");
+  const canvas = document.getElementById("chartMes");
   if (!canvas) return;
 
   if (chartMes) chartMes.destroy();
@@ -325,22 +371,20 @@ function buildChartMes(rows, monthsSorted) {
   chartMes = new Chart(canvas.getContext("2d"), {
     type: "bar",
     data: {
-      labels,
+      labels: months,
       datasets: [
         {
           label: "Demoras",
-          data: values
+          data: counts,
+          borderWidth: 0
         },
         {
           type: "line",
           label: "Tendencia",
-          data: values,
-          borderColor: COLORS.line,
-          backgroundColor: COLORS.line,
-          borderDash: [6, 6],
+          data: counts,
           tension: 0,
-          pointRadius: 3,
-          pointHoverRadius: 5
+          pointRadius: 4,
+          pointHoverRadius: 6
         }
       ]
     },
@@ -348,48 +392,41 @@ function buildChartMes(rows, monthsSorted) {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: { grid: { color: "transparent" }, ticks: { color: COLORS.muted } },
-        y: { beginAtZero: true, grid: { color: COLORS.grid }, ticks: { color: COLORS.muted } }
+        x: { grid: { color: "transparent" } },
+        y: { beginAtZero: true }
       },
       plugins: {
         legend: { position: "bottom" },
-        tooltip: {
-          callbacks: { label: (c) => ` ${c.dataset.label}: ${fmtInt(c.parsed.y ?? 0)}` }
-        },
         datalabels: {
-          formatter: (v, ctx) => (ctx.dataset.type === "line" ? "" : (v ? fmtInt(v) : "")),
+          formatter: (v) => (v ? fmtInt(v) : ""),
           anchor: "end",
           align: "end",
-          offset: 2,
-          font: { weight: "900" }
+          offset: 2
         }
       }
     }
   });
 }
 
-/* ============================
-   RENDER: DONUT (area mes)
-============================ */
-function buildChartArea(rows, monthSelected) {
-  const map = aggByAreaForMonth(rows, monthSelected);
+function buildChartAreas() {
+  const rows = filteredRowsByClienteYMes();
+  const areaMap = aggAreas(rows);
 
   const labels = [];
   const values = [];
-  for (const [k,v] of map.entries()) {
+
+  for (const [k,v] of areaMap.entries()) {
     if (!v) continue;
     labels.push(k);
     values.push(v);
   }
 
-  const total = values.reduce((a,b)=>a+b,0);
-
-  const canvas = document.getElementById("chartDemorasArea");
+  const canvas = document.getElementById("chartAreas");
   if (!canvas) return;
 
-  if (chartArea) chartArea.destroy();
+  if (chartAreas) chartAreas.destroy();
 
-  chartArea = new Chart(canvas.getContext("2d"), {
+  chartAreas = new Chart(canvas.getContext("2d"), {
     type: "doughnut",
     data: {
       labels,
@@ -403,24 +440,19 @@ function buildChartArea(rows, monthSelected) {
         legend: { position: "right" },
         tooltip: {
           callbacks: {
-            label: (c) => {
-              const v = c.parsed ?? 0;
-              const pct = total ? (v/total*100) : 0;
-              return ` ${c.label}: ${fmtInt(v)} (${pct.toFixed(2).replace(".", ",")}%)`;
-            }
+            label: (c) => ` ${c.label}: ${fmtInt(c.parsed)}`
           }
         },
         datalabels: {
           formatter: (v, ctx) => {
+            const total = ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
             if (!total) return "";
-            const pct = (v/total*100);
-            if (pct < 4) return "";
-            return `${fmtInt(v)} (${pct.toFixed(2).replace(".", ",")}%)`;
+            const pct = (v / total) * 100;
+            return `${fmtInt(v)} (${pct.toFixed(1).replace(".", ",")}%)`;
           },
           anchor: "end",
           align: "end",
-          offset: 8,
-          font: { weight: "900" }
+          offset: 10
         }
       }
     }
@@ -428,79 +460,47 @@ function buildChartArea(rows, monthSelected) {
 }
 
 /* ============================
-   TABLE: meses x áreas
+   TABLE
 ============================ */
-function buildTable(rows, monthsSorted) {
-  const tbl = document.getElementById("tablaDemoras");
-  if (!tbl) return;
+function buildTabla() {
+  const rows = filteredRows();
+  const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))].sort();
 
-  const cols = AREA_COLS;
+  const thead = document.querySelector("#tablaAreas thead");
+  const tbody = document.querySelector("#tablaAreas tbody");
+  if (!thead || !tbody) return;
 
   // header
-  const thead = document.createElement("thead");
-  const trh = document.createElement("tr");
-
-  const th0 = document.createElement("th");
-  th0.textContent = "Mes";
-  trh.appendChild(th0);
-
-  for (const c of cols) {
-    const th = document.createElement("th");
-    th.textContent = c;
-    trh.appendChild(th);
-  }
-
-  const thT = document.createElement("th");
-  thT.textContent = "Total";
-  trh.appendChild(thT);
-
-  thead.appendChild(trh);
+  const cols = ["Mes", ...AREA_COLS];
+  thead.innerHTML = `<tr>${cols.map(c => `<th>${c}</th>`).join("")}</tr>`;
 
   // body
-  const tbody = document.createElement("tbody");
+  const lines = [];
+  for (const m of months) {
+    const rowsM = rows.filter(r => getMonthKeyFromRow(r) === m);
+    const areaMap = aggAreas(rowsM);
 
-  for (const m of monthsSorted) {
-    // sumar por área para ese mes
-    const map = aggByAreaForMonth(rows, m);
-
-    let total = 0;
-    const tr = document.createElement("tr");
-
-    const td0 = document.createElement("td");
-    td0.textContent = m;
-    tr.appendChild(td0);
-
-    for (const c of cols) {
-      const v = map.get(c) ?? 0;
-      total += v;
-      const td = document.createElement("td");
-      td.textContent = v ? fmtInt(v) : "";
-      tr.appendChild(td);
-    }
-
-    const tdT = document.createElement("td");
-    tdT.textContent = total ? fmtInt(total) : "";
-    tr.appendChild(tdT);
-
-    tbody.appendChild(tr);
+    const tds = [
+      `<td class="td-strong">${m}</td>`,
+      ...AREA_COLS.map(a => `<td class="td-num">${fmtInt(areaMap.get(a) || 0)}</td>`)
+    ];
+    lines.push(`<tr>${tds.join("")}</tr>`);
   }
 
-  tbl.innerHTML = "";
-  tbl.appendChild(thead);
-  tbl.appendChild(tbody);
+  tbody.innerHTML = lines.join("");
 }
 
 /* ============================
    APPLY ALL
 ============================ */
 function applyAll() {
-  const rows = rowsByCliente();
-  const months = renderMeses(rows);
+  const rows = filteredRows();
+  const months = buildMesSelect(rows);
 
-  const mesSel = document.getElementById("mesSelect")?.value || "";
-  buildChartMes(rows, months);
-  buildChartArea(rows, mesSel);
-  buildTable(rows, months);
+  updateKPIs();
+  buildChartMes();
+  buildChartAreas();
+  buildTabla();
 }
 
 /* ============================
@@ -509,10 +509,9 @@ function applyAll() {
 window.addEventListener("DOMContentLoaded", () => {
   applyChartDefaults();
 
-  // fecha “hoy”
+  // fecha “hoy” en header
   const d = new Date();
-  const last = document.getElementById("lastUpdate");
-  if (last) last.textContent =
+  document.getElementById("lastUpdate").textContent =
     `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 
   fetch(csvUrl)
@@ -528,15 +527,22 @@ window.addEventListener("DOMContentLoaded", () => {
       }
 
       headers = m[0].map(clean);
-
       detectColumns();
 
       if (!CLIENT_COL) {
-        showError("No encuentro columna CLIENTE/OBRA/ALMACEN en DEMORAS.csv.");
+        showError("No encontré columna CLIENTE/OBRA/ALMACÉN. Probé: " + CLIENT_CANDIDATES.join(" / "));
         return;
       }
+
+      // MES_COL o FECHA_COL (al menos uno)
+      if (!MES_COL && !FECHA_COL) {
+        showError("No encontré MES ni FECHA para armar el eje temporal. Probé MES: " +
+          MES_CANDIDATES.join(" / ") + " | FECHA: " + FECHA_CANDIDATES.join(" / "));
+        return;
+      }
+
       if (!AREA_COLS.length) {
-        showError("No encuentro columnas de ÁREAS (PROYECTO/COMPRAS/BLEND/etc.). Revisá encabezados.");
+        showError("No pude detectar columnas de ÁREA. Asegurate de tener columnas como: " + AREA_EXPECTED.join(", "));
         return;
       }
 
@@ -552,7 +558,10 @@ window.addEventListener("DOMContentLoaded", () => {
       applyAll();
 
       document.getElementById("clienteSelect")?.addEventListener("change", applyAll);
-      document.getElementById("mesSelect")?.addEventListener("change", applyAll);
+      document.getElementById("mesSelect")?.addEventListener("change", () => {
+        updateKPIs();
+        buildChartAreas();
+      });
     })
     .catch(err => {
       console.error(err);
