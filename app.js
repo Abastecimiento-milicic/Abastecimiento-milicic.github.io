@@ -156,7 +156,544 @@ function filteredRowsByClienteYMes() {
   return rows.filter(r => getMonthKeyFromRow(r) === mes);
 }
 
-/* ===*
+/* ============================
+   SELECTS
+============================ */
+function renderClientes() {
+  const sel = document.getElementById("clienteSelect");
+  if (!sel) return;
+
+  sel.querySelectorAll("option:not([value=''])").forEach(o => o.remove());
+
+  const clientes = [...new Set(data.map(r => clean(r[CLIENT_COL])).filter(Boolean))]
+    .sort((a,b) => a.localeCompare(b, "es"));
+
+  for (const c of clientes) {
+    const o = document.createElement("option");
+    o.value = c;
+    o.textContent = c;
+    sel.appendChild(o);
+  }
+}
+
+function buildMesSelect(rows) {
+  const sel = document.getElementById("mesSelect");
+  if (!sel) return [];
+
+  const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))].sort();
+  const prevSelected = sel.value;
+
+  sel.innerHTML = "";
+  for (const m of months) {
+    const o = document.createElement("option");
+    o.value = m;
+    o.textContent = m;
+    sel.appendChild(o);
+  }
+
+  sel.value = months.includes(prevSelected) ? prevSelected : (months[months.length - 1] || "");
+
+  const hint = document.getElementById("mesHint");
+  if (hint) hint.textContent = sel.value ? `Mes seleccionado: ${sel.value}` : "Sin meses";
+
+  return months;
+}
+
+/* ============================
+   KPI CALCS
+============================ */
+function calcTotals(rows) {
+  let at = 0, ft = 0, no = 0;
+  for (const r of rows) {
+    at += toNumber(r[AT_COL]);
+    ft += toNumber(r[FT_COL]);
+    no += toNumber(r[NO_COL]);
+  }
+  const total = at + ft + no;
+  return { at, ft, no, total };
+}
+
+function calcMonthTotals(rows, month) {
+  let at = 0, ft = 0, no = 0;
+
+  for (const r of rows) {
+    if (getMonthKeyFromRow(r) !== month) continue;
+    at += toNumber(r[AT_COL]);
+    ft += toNumber(r[FT_COL]);
+    no += toNumber(r[NO_COL]);
+  }
+
+  const total = at + ft + no;
+  const pctAT = total ? at / total : NaN;
+  const pctFT = total ? ft / total : NaN;
+  const pctNO = total ? no / total : NaN;
+
+  return { at, ft, no, total, pctAT, pctFT, pctNO };
+}
+
+/* ============================
+   DELTAS
+============================ */
+function deltaInfo(curr, prev) {
+  if (!isFinite(curr) || !isFinite(prev)) return { text: "Sin mes anterior", diff: NaN };
+  const diff = curr - prev;
+  const eps = 0.000001;
+  if (Math.abs(diff) < eps) return { text: "• 0,0% vs mes anterior", diff: 0 };
+  const arrow = diff > 0 ? "▲" : "▼";
+  const txt = `${arrow} ${(Math.abs(diff) * 100).toFixed(1).replace(".", ",")}% vs mes anterior`;
+  return { text: txt, diff };
+}
+
+function setDelta(el, text, cls) {
+  if (!el) return;
+  el.classList.remove("delta-good", "delta-bad", "delta-neutral");
+  if (cls) el.classList.add(cls);
+  el.textContent = text;
+}
+
+/* ============================
+   KPIs UI
+============================ */
+function updateKPIsGeneral(rows) {
+  const t = calcTotals(rows);
+  const pctAT = t.total ? t.at / t.total : NaN;
+  const pctFT = t.total ? t.ft / t.total : NaN;
+  const pctNO = t.total ? t.no / t.total : NaN;
+
+  document.getElementById("kpiTotal").textContent = fmtInt(t.total);
+
+  document.getElementById("kpiATpct").textContent = fmtPct01(pctAT);
+  document.getElementById("kpiATqty").textContent = `Cantidad: ${fmtInt(t.at)}`;
+
+  document.getElementById("kpiFTpct").textContent = fmtPct01(pctFT);
+  document.getElementById("kpiFTqty").textContent = `Cantidad: ${fmtInt(t.ft)}`;
+
+  document.getElementById("kpiNOpct").textContent = fmtPct01(pctNO);
+  document.getElementById("kpiNOqty").textContent = `Cantidad: ${fmtInt(t.no)}`;
+}
+
+function updateKPIsMonthly(rows, months) {
+  const mes = document.getElementById("mesSelect")?.value || "";
+  if (!mes) return;
+
+  const idx = months.indexOf(mes);
+  const prevMes = idx > 0 ? months[idx - 1] : null;
+
+  const cur = calcMonthTotals(rows, mes);
+  const prev = prevMes ? calcMonthTotals(rows, prevMes) : null;
+
+  document.getElementById("kpiTotalMes").textContent = fmtInt(cur.total);
+  document.getElementById("kpiATmes").textContent = fmtPct01(cur.pctAT);
+  document.getElementById("kpiFTmes").textContent = fmtPct01(cur.pctFT);
+  document.getElementById("kpiNOmes").textContent = fmtPct01(cur.pctNO);
+
+  const atSub = document.getElementById("kpiATmesSub");
+  const ftSub = document.getElementById("kpiFTmesSub");
+  const noSub = document.getElementById("kpiNOmesSub");
+
+  if (!prev) {
+    setDelta(atSub, `Cant: ${fmtInt(cur.at)} · Sin mes anterior`, "");
+    setDelta(ftSub, `Cant: ${fmtInt(cur.ft)} · Sin mes anterior`, "");
+    setDelta(noSub, `Cant: ${fmtInt(cur.no)} · Sin mes anterior`, "");
+    return;
+  }
+
+  const dAT = deltaInfo(cur.pctAT, prev.pctAT);
+  const dFT = deltaInfo(cur.pctFT, prev.pctFT);
+  const dNO = deltaInfo(cur.pctNO, prev.pctNO);
+
+  // Reglas
+  let clsAT = "delta-good";
+  if (dAT.diff < 0) clsAT = "delta-bad";
+
+  let clsFT = "delta-bad";
+  if (dFT.diff < 0) clsFT = "delta-good";
+
+  let clsNO = "delta-good";
+  if (dNO.diff > 0) clsNO = "delta-bad";
+
+  setDelta(atSub, `Cant: ${fmtInt(cur.at)} · ${dAT.text}`, clsAT);
+  setDelta(ftSub, `Cant: ${fmtInt(cur.ft)} · ${dFT.text}`, clsFT);
+  setDelta(noSub, `Cant: ${fmtInt(cur.no)} · ${dNO.text}`, clsNO);
+}
+
+/* ============================
+   CHART DEFAULTS
+============================ */
+function applyChartDefaults() {
+  Chart.register(ChartDataLabels);
+
+  Chart.defaults.color = COLORS.text;
+  Chart.defaults.font.family = '"Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif';
+  Chart.defaults.font.weight = "800";
+
+  Chart.defaults.interaction.mode = "index";
+  Chart.defaults.interaction.intersect = false;
+
+  Chart.defaults.plugins.tooltip.backgroundColor = "rgba(255,255,255,0.97)";
+  Chart.defaults.plugins.tooltip.titleColor = COLORS.text;
+  Chart.defaults.plugins.tooltip.bodyColor = COLORS.text;
+  Chart.defaults.plugins.tooltip.borderColor = "rgba(2,8,20,.18)";
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.displayColors = true;
+}
+
+/* ============================
+   CHART 1: 100% stacked bar
+============================ */
+function buildChartMes(rows) {
+  const agg = new Map();
+  const monthsSet = new Set();
+
+  for (const r of rows) {
+    const d = parseDateAny(r[FECHA_COL]);
+    if (!d) continue;
+
+    const mk = monthKey(d);
+    monthsSet.add(mk);
+
+    if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0 });
+    const c = agg.get(mk);
+
+    c.at += toNumber(r[AT_COL]);
+    c.ft += toNumber(r[FT_COL]);
+    c.no += toNumber(r[NO_COL]);
+  }
+
+  const months = [...monthsSet].sort();
+  const qAT = months.map(m => agg.get(m)?.at ?? 0);
+  const qFT = months.map(m => agg.get(m)?.ft ?? 0);
+  const qNO = months.map(m => agg.get(m)?.no ?? 0);
+
+  const pAT = qAT.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t)*100 : 0; });
+  const pFT = qFT.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t)*100 : 0; });
+  const pNO = qNO.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t)*100 : 0; });
+
+  const canvas = document.getElementById("chartMes");
+  if (!canvas) return;
+
+  if (chartMes) chartMes.destroy();
+
+  chartMes = new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: months,
+      datasets: [
+        { label: "Entregados AT", data: pAT, _q: qAT, stack:"s", backgroundColor: COLORS.green },
+        { label: "Entregados FT", data: pFT, _q: qFT, stack:"s", backgroundColor: COLORS.amber },
+        { label: "No entregados", data: pNO, _q: qNO, stack:"s", backgroundColor: COLORS.red },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked:true, grid:{ color:"transparent" }, ticks:{ color: COLORS.muted } },
+        y: {
+          stacked:true,
+          beginAtZero:true,
+          max:100,
+          grid:{ color: COLORS.grid },
+          ticks:{ color: COLORS.muted, callback:(v)=> v + "%" }
+        }
+      },
+      plugins: {
+        legend: { position:"bottom" },
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              const pct = (c.parsed.y ?? 0).toFixed(1).replace(".", ",");
+              const qty = c.dataset._q?.[c.dataIndex] ?? 0;
+              return ` ${c.dataset.label}: ${fmtInt(qty)} (${pct}%)`;
+            }
+          }
+        },
+        datalabels: {
+          formatter: (v, ctx) => {
+            const qty = ctx.dataset._q?.[ctx.dataIndex] ?? 0;
+            if (!qty || v < 7) return "";
+            return `${fmtInt(qty)} (${v.toFixed(0)}%)`;
+          },
+          anchor: "center",
+          align: "center",
+          clamp: true,
+          color: "#fff",
+          font: { weight: "900", size: 11 }
+        }
+      }
+    }
+  });
+}
+
+/* ============================
+   CHART 2: Trend lines
+============================ */
+function buildChartTendencia(rows) {
+  const agg = new Map();
+  const monthsSet = new Set();
+
+  for (const r of rows) {
+    const d = parseDateAny(r[FECHA_COL]);
+    if (!d) continue;
+
+    const mk = monthKey(d);
+    monthsSet.add(mk);
+
+    if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0 });
+    const c = agg.get(mk);
+
+    c.at += toNumber(r[AT_COL]);
+    c.ft += toNumber(r[FT_COL]);
+    c.no += toNumber(r[NO_COL]);
+  }
+
+  const months = [...monthsSet].sort();
+
+  const pAT = months.map(m => {
+    const c = agg.get(m); const t = c.at + c.ft + c.no;
+    return t ? (c.at / t) * 100 : 0;
+  });
+  const pFT = months.map(m => {
+    const c = agg.get(m); const t = c.at + c.ft + c.no;
+    return t ? (c.ft / t) * 100 : 0;
+  });
+  const pNO = months.map(m => {
+    const c = agg.get(m); const t = c.at + c.ft + c.no;
+    return t ? (c.no / t) * 100 : 0;
+  });
+
+  const canvas = document.getElementById("chartTendencia");
+  if (!canvas) return;
+
+  if (chartTendencia) chartTendencia.destroy();
+
+  chartTendencia = new Chart(canvas.getContext("2d"), {
+    type: "line",
+    data: {
+      labels: months,
+      datasets: [
+        { label: "A Tiempo %", data: pAT, borderColor: COLORS.green, backgroundColor: COLORS.green, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
+        { label: "Fuera Tiempo %", data: pFT, borderColor: COLORS.amber, backgroundColor: COLORS.amber, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
+        { label: "No Entregados %", data: pNO, borderColor: COLORS.red, backgroundColor: COLORS.red, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { grid: { color: "transparent" }, ticks: { color: COLORS.muted } },
+        y: {
+          beginAtZero: true,
+          max: 100,
+          grid: { color: COLORS.grid },
+          ticks: { color: COLORS.muted, callback: (v) => v + "%" }
+        }
+      },
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%` } },
+        datalabels: {
+          align: "top",
+          anchor: "end",
+          offset: 6,
+          formatter: (v) => `${Number(v).toFixed(0)}%`,
+          color: COLORS.text,
+          font: { size: 11, weight: "900" }
+        }
+      }
+    }
+  });
+}
+
+/* ============================
+   DOWNLOAD: NO ENTREGADOS
+============================ */
+function escapeCSV(v) {
+  const s = (v ?? "").toString();
+  if (/[;"\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadCSV(filename, rows, cols) {
+  const header = cols.map(escapeCSV).join(";");
+  const lines = rows.map(r => cols.map(c => escapeCSV(r[c])).join(";"));
+  const csv = [header, ...lines].join("\r\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  URL.revokeObjectURL(url);
+}
+
+function getNoEntregadosRows(rows) {
+  return rows.filter(r => toNumber(r[NO_COL]) > 0);
+}
+
+/* ============================
+   APPLY ALL
+============================ */
+function applyAll() {
+  const rows = filteredRowsByCliente();
+  const months = buildMesSelect(rows);
+
+  updateKPIsGeneral(rows);
+  updateKPIsMonthly(rows, months);
+
+  buildChartMes(rows);
+  buildChartTendencia(rows);
+}
+
+/* ============================
+   LOAD CSV (reutilizable)
+============================ */
+function setTextsForTab(tabName, fileName) {
+  const subtitle = document.getElementById("subtitle");
+  const foot = document.getElementById("footnote");
+
+  if (tabName === "ANALISIS_MM") {
+    if (subtitle) subtitle.textContent = "Análisis MM (desde CSV)";
+    if (foot) foot.innerHTML = `Fuente: <b>${fileName}</b> (delimitador “;”).`;
+  } else {
+    if (subtitle) subtitle.textContent = "Análisis de Cumplimiento de Pedidos por Obra";
+    if (foot) foot.innerHTML = `Fuente: <b>${fileName}</b> (delimitador “;”) · Cálculo: AT/FT/NO por mes (${FECHA_COL}).`;
+  }
+}
+
+function loadCSV(url, tabName) {
+  csvUrl = url;
+
+  // reset
+  data = [];
+  headers = [];
+  CLIENT_COL = null;
+
+  clearError();
+
+  // destroy charts (evita bugs al cambiar de tab)
+  if (chartMes) { chartMes.destroy(); chartMes = null; }
+  if (chartTendencia) { chartTendencia.destroy(); chartTendencia = null; }
+
+  // reset UI
+  document.getElementById("clienteSelect").value = "";
+  document.getElementById("mesSelect").innerHTML = "";
+  document.getElementById("clienteHint").textContent = `Cargando: ${csvUrl} ...`;
+  document.getElementById("mesHint").textContent = "Mes seleccionado: -";
+
+  setTextsForTab(tabName, csvUrl);
+
+  fetch(csvUrl)
+    .then(r => {
+      if (!r.ok) throw new Error(`No pude abrir ${csvUrl} (HTTP ${r.status})`);
+      return r.text();
+    })
+    .then(text => {
+      const m = parseDelimited(text, DELIM);
+      if (!m.length || m.length < 2) {
+        showError(`El CSV "${csvUrl}" está vacío o no tiene filas.`);
+        return;
+      }
+
+      headers = m[0].map(clean);
+
+      CLIENT_COL = CLIENT_CANDIDATES.find(c => headers.includes(c));
+      if (!CLIENT_COL) {
+        showError(`Leí "${csvUrl}" pero NO encuentro columna CLIENTE. Probé: ${CLIENT_CANDIDATES.join(" / ")}`);
+        return;
+      }
+
+      const required = [FECHA_COL, AT_COL, FT_COL, NO_COL];
+      const missing = required.filter(c => !headers.includes(c));
+      if (missing.length) {
+        showError(`Leí "${csvUrl}" pero faltan columnas para este tablero: ${missing.join(", ")}`);
+        return;
+      }
+
+      data = m.slice(1).map(row => {
+        const o = {};
+        headers.forEach((h, i) => (o[h] = clean(row[i])));
+        return o;
+      });
+
+      document.getElementById("clienteHint").textContent = `Archivo: ${csvUrl} · Columna cliente: ${CLIENT_COL}`;
+
+      renderClientes();
+      applyAll();
+    })
+    .catch(err => {
+      console.error(err);
+      showError(`Error cargando "${csvUrl}". Revisá el nombre del archivo y que esté en la raíz del repo.`);
+    });
+}
+
+/* ============================
+   INIT
+============================ */
+window.addEventListener("DOMContentLoaded", () => {
+  applyChartDefaults();
+
+  // fecha “hoy”
+  const d = new Date();
+  document.getElementById("lastUpdate").textContent =
+    `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+
+  // listeners filtros (se mantienen)
+  document.getElementById("clienteSelect")?.addEventListener("change", applyAll);
+
+  document.getElementById("mesSelect")?.addEventListener("change", () => {
+    const rows = filteredRowsByCliente();
+    const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))].sort();
+    updateKPIsMonthly(rows, months);
+  });
+
+  document.getElementById("btnDownloadNO")?.addEventListener("click", () => {
+    if (!CLIENT_COL) return;
+
+    const rowsFilt = filteredRowsByClienteYMes();
+    const noRows = getNoEntregadosRows(rowsFilt);
+
+    if (!noRows.length) {
+      alert("No hay NO ENTREGADOS para el filtro actual.");
+      return;
+    }
+
+    const cols = [CLIENT_COL, FECHA_COL, AT_COL, FT_COL, NO_COL];
+
+    const cliente = safeFilePart(document.getElementById("clienteSelect")?.value || "Todos");
+    const mes = safeFilePart(document.getElementById("mesSelect")?.value || "Todos");
+    const filename = `NO_ENTREGADOS_${cliente}_${mes}.csv`;
+
+    downloadCSV(filename, noRows, cols);
+  });
+
+  // tabs
+  const tabCumplimiento = document.getElementById("tabCumplimiento");
+  const tabAnalisisMM = document.getElementById("tabAnalisisMM");
+
+  tabCumplimiento?.addEventListener("click", (e) => {
+    e.preventDefault();
+    tabCumplimiento.classList.add("active");
+    tabAnalisisMM.classList.remove("active");
+    loadCSV("CUMPLIMIENTO_2025.csv", "CUMPLIMIENTO");
+  });
+
+  tabAnalisisMM?.addEventListener("click", (e) => {
+    e.preventDefault();
+    tabAnalisisMM.classList.add("active");
+    tabCumplimiento.classList.remove("active");
+    loadCSV("ANALISIS-MM.csv", "ANALISIS_MM");
+  });
+
+  // load inicial
+  loadCSV("CUMPLIMIENTO_2025.csv", "CUMPLIMIENTO");
+});
 
 
 
