@@ -4,16 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Control de Compras - Construcción</title>
+
   <link rel="stylesheet" href="styles.css" />
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
 
 <body>
+  <!-- HEADER -->
   <header class="topbar">
     <div class="topbar-left">
       <div class="title">Control de Compras - Construcción</div>
-      <div class="subtitle">Análisis de Cumplimiento de Pedidos por Obra</div>
+      <div class="subtitle">Análisis de Cumplimiento</div>
     </div>
 
     <div class="topbar-right">
@@ -24,10 +27,11 @@
     </div>
   </header>
 
+  <!-- TABS -->
   <nav class="tabs">
     <a class="tab active" href="index.html">CUMPLIMIENTO</a>
     <a class="tab" href="analisis-mm.html">ANÁLISIS MM</a>
-    <a class="tab" href="#" onclick="return false;">DEMORAS</a>
+    <a class="tab" href="demoras.html">DEMORAS</a>
   </nav>
 
   <main class="container">
@@ -52,7 +56,9 @@
 
         <div class="filter">
           <label>&nbsp;</label>
-          <button id="btnDownloadNO" class="btn">⬇ Descargar NO entregados</button>
+          <button id="btnDownloadNO" class="btn">
+            ⬇ Descargar NO entregados
+          </button>
           <div class="hint">Exporta CSV con “;”</div>
         </div>
       </div>
@@ -60,7 +66,7 @@
 
     <!-- KPIs ACUMULADO -->
     <section class="panel">
-      <div class="panel-title">CUMPLIMIENTO ACUMULADO (últimos 12 meses)</div>
+      <div class="panel-title">CUMPLIMIENTO ACUMULADO</div>
 
       <div class="panel-body kpi-grid">
         <div class="kpi kpi-blue">
@@ -101,55 +107,12 @@
       </div>
     </section>
 
-    <!-- KPIs MES -->
+    <!-- GRÁFICOS -->
     <section class="panel">
-      <div class="panel-title">CUMPLIMIENTO - MES SELECCIONADO</div>
-
-      <div class="panel-body kpi-grid kpi-grid-4">
-        <div class="kpi kpi-blue">
-          <div class="kpi-head">
-            <div class="kpi-title">COMPROMETIDOS (MES)</div>
-            <div class="kpi-icon">📌</div>
-          </div>
-          <div id="kpiTotalMes" class="kpi-value">-</div>
-          <div class="kpi-sub">Total del mes</div>
-        </div>
-
-        <div class="kpi kpi-green">
-          <div class="kpi-head">
-            <div class="kpi-title">% AT (MES)</div>
-            <div class="kpi-icon">✓</div>
-          </div>
-          <div id="kpiATmes" class="kpi-value">-</div>
-          <div id="kpiATmesSub" class="kpi-sub kpi-sub-strong"></div>
-        </div>
-
-        <div class="kpi kpi-amber">
-          <div class="kpi-head">
-            <div class="kpi-title">% FT (MES)</div>
-            <div class="kpi-icon">⏱</div>
-          </div>
-          <div id="kpiFTmes" class="kpi-value">-</div>
-          <div id="kpiFTmesSub" class="kpi-sub kpi-sub-strong"></div>
-        </div>
-
-        <div class="kpi kpi-red">
-          <div class="kpi-head">
-            <div class="kpi-title">% NO (MES)</div>
-            <div class="kpi-icon">⚠</div>
-          </div>
-          <div id="kpiNOmes" class="kpi-value">-</div>
-          <div id="kpiNOmesSub" class="kpi-sub kpi-sub-strong"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- GRAFICO 100% APILADO -->
-    <section class="panel">
-      <div class="panel-title">CUMPLIMIENTO POR MES (100% APILADO)</div>
+      <div class="panel-title">CUMPLIMIENTO POR MES</div>
       <div class="panel-body">
         <div class="chart-card">
-          <div class="chart-title">Cantidad y % por mes</div>
+          <div class="chart-title">Distribución AT / FT / NO</div>
           <div class="chart-wrap">
             <canvas id="chartMes"></canvas>
           </div>
@@ -157,12 +120,11 @@
       </div>
     </section>
 
-    <!-- TENDENCIA -->
     <section class="panel">
-      <div class="panel-title">TENDENCIA DE CUMPLIMIENTO</div>
+      <div class="panel-title">TENDENCIA</div>
       <div class="panel-body">
         <div class="chart-card">
-          <div class="chart-title">AT % / FT % / NO %</div>
+          <div class="chart-title">Evolución porcentual</div>
           <div class="chart-wrap">
             <canvas id="chartTendencia"></canvas>
           </div>
@@ -171,7 +133,7 @@
     </section>
 
     <footer class="footnote">
-      Fuente: <b>CUMPLIMIENTO_2025.csv</b> (delimitador “;”) · Cálculo: AT/FT/NO por mes (FECHA ENTREGA ESPERADA).
+      Fuente: <b>CUMPLIMIENTO_2025.csv</b>
     </footer>
   </main>
 
