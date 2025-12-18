@@ -1,4 +1,3 @@
-// router.js — cambia vistas en la misma página
 (function () {
   const tabs = Array.from(document.querySelectorAll(".tabs .tab"));
   const views = {
@@ -14,16 +13,13 @@
       el.classList.toggle("hidden", k !== viewKey);
     });
 
-    // Inicializa MM cuando entrás (lazy load)
     if (viewKey === "mm" && window.MM && typeof window.MM.ensureLoaded === "function") {
       window.MM.ensureLoaded();
     }
   }
 
-  tabs.forEach(btn => {
-    btn.addEventListener("click", () => setActive(btn.dataset.view));
-  });
+  tabs.forEach(btn => btn.addEventListener("click", () => setActive(btn.dataset.view)));
 
-  // Default
+  // default
   setActive("cumplimiento");
 })();
