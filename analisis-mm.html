@@ -3,12 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Control de Compras - Análisis MM</title>
-
+  <title>Análisis MM</title>
   <link rel="stylesheet" href="styles.css" />
-
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
 
 <body>
@@ -35,21 +32,26 @@
   <main class="container">
     <div id="msg"></div>
 
-    <!-- FILTRO -->
+    <!-- FILTRO CLIENTE -->
     <section class="panel">
-      <div class="panel-body filters mm-filters">
+      <div class="panel-body filters filters-mm">
         <div class="filter">
-          <label>CLIENTE</label>
-          <select id="clienteSelect">
+          <label>CLIENTE (ALMACEN)</label>
+          <select id="clienteMM">
             <option value="">Todos</option>
           </select>
-          <div id="clienteHint" class="hint">Columna cliente: ALMACEN</div>
+          <div id="clienteHint" class="hint">Columna cliente: -</div>
         </div>
 
         <div class="filter">
           <label>&nbsp;</label>
-          <button id="btnReset" class="btn">↺ Reset</button>
-          <div class="hint">Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”)</div>
+          <button id="btnResetMM" class="btn">Reset</button>
+          <div class="hint">Vuelve a “Todos”</div>
+        </div>
+
+        <div class="filter">
+          <label>&nbsp;</label>
+          <div class="hint"><b>Fuente:</b> ANALISIS-MM.csv (delimitador “;”)</div>
         </div>
       </div>
     </section>
@@ -71,10 +73,10 @@
         <div class="kpi kpi-green">
           <div class="kpi-head">
             <div class="kpi-title">CANT DISPONIBLE</div>
-            <div class="kpi-icon">✓</div>
+            <div class="kpi-icon">✅</div>
           </div>
           <div id="kpiDispQty" class="kpi-value">-</div>
-          <div class="kpi-sub">LIBRE UTILIZACION &gt; 0</div>
+          <div class="kpi-sub">Materiales con Libre utilización &gt; 0</div>
         </div>
 
         <div class="kpi kpi-amber">
@@ -83,57 +85,54 @@
             <div class="kpi-icon">📈</div>
           </div>
           <div id="kpiDispPct" class="kpi-value">-</div>
-          <div class="kpi-sub">% sobre materiales</div>
+          <div class="kpi-sub">Disponible / Materiales</div>
         </div>
       </div>
     </section>
 
-    <!-- TABLA + DONUT -->
+    <!-- TABLA + GRAFICO -->
     <section class="panel">
       <div class="panel-title">ESTADOS</div>
-
       <div class="panel-body mm-grid">
-        <!-- Tabla -->
-        <div class="chart-card">
-          <div class="chart-title">Estados (conteo por materiales)</div>
-
+        <div class="mm-card">
+          <div class="mm-card-title">Tabla de estados</div>
           <div class="table-wrap">
-            <table class="mm-table">
+            <table class="tbl" id="tblEstados">
               <thead>
                 <tr>
-                  <th>ESTADOS</th>
+                  <th>ESTADO</th>
                   <th class="num">CANT MATERIALES</th>
                   <th class="num">%TG CANT MATERIALES</th>
                 </tr>
               </thead>
-              <tbody id="tbodyEstados"></tbody>
+              <tbody></tbody>
               <tfoot>
                 <tr>
                   <td><b>Total</b></td>
-                  <td id="totalMat" class="num">-</td>
-                  <td class="num"><b>100,00%</b></td>
+                  <td class="num" id="totalMat">-</td>
+                  <td class="num" id="totalPct">100,00%</td>
                 </tr>
               </tfoot>
             </table>
           </div>
         </div>
 
-        <!-- Donut -->
-        <div class="chart-card">
-          <div class="chart-title">Distribución por estado</div>
+        <div class="mm-card">
+          <div class="mm-card-title">Gráfico circular</div>
           <div class="chart-wrap mm-donut">
             <canvas id="chartEstados"></canvas>
           </div>
-          <div id="legendEstados" class="mm-legend"></div>
+          <div class="hint">Cuenta materiales distintos por estado</div>
         </div>
       </div>
     </section>
 
     <footer class="footnote">
-      Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”)
+      Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”). Cliente = ALMACEN. Disponible = Libre utilización &gt; 0.
     </footer>
   </main>
 
   <script src="analisis-mm.js"></script>
 </body>
 </html>
+
