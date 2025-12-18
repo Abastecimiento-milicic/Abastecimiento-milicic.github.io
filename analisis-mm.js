@@ -1,25 +1,28 @@
 /* ============================
    CONFIG
 ============================ */
-const csvUrl = "ANALISIS-MM.csv";
+const csvUrlMM = "ANALISIS-MM.csv";
 const DELIM = ";";
 
-// Columnas esperadas (con tolerancia de mayúsculas/minúsculas)
-const COL_CLIENTE = ["ALMACEN"];
-const COL_MATERIAL = ["Material", "MATERIAL", "CODIGO MATERIAL", "COD_MATERIAL"];
-const COL_LIBRE = ["LIBRE UTILIZACION", "LIBRE_UTILIZACION", "LIBRE UTILIZACIÓN", "LIBREUTILIZACION"];
-const COL_ESTADO = ["estado", "ESTADO", "Estado"];
+// Candidatos por si tu CSV viene con acentos o recortes (como en tu captura)
+const ALMACEN_CAND = ["ALMACEN", "Almacen", "Almacén", "ALMACÉN"];
+const MATERIAL_CAND = ["Material", "MATERIAL", "Codigo Item", "Código Item", "Material Texto breve"];
+const LIBRE_CAND = [
+  "LIBRE UTILIZACION", "Libre utilizacion", "Libre utilización",
+  "Libre utilizaci", "Libre Utilizaci", "Libre Utilizacion"
+];
+const ESTADO_CAND = ["Estado", "ESTADO", "Id Estado", "ID Estado", "Estado stock", "Estado de stock"];
 
 /* ============================
    GLOBAL
 ============================ */
-let rows = [];
-let headers = [];
+let rowsMM = [];
+let headersMM = [];
 
-let H_CLIENTE = null;
-let H_MATERIAL = null;
-let H_LIBRE = null;
-let H_ESTADO = null;
+let COL_ALMACEN = null;
+let COL_MATERIAL = null;
+let COL_LIBRE = null;
+let COL_ESTADO = null;
 
 let chartEstados = null;
 
@@ -28,32 +31,13 @@ let chartEstados = null;
 ============================ */
 const clean = (v) => (v ?? "").toString().trim();
 
-function toNumber(v) {
-  let x = clean(v);
-  if (!x) return 0;
-  x = x.replace(/\s/g, "");
-  // 1.234,56 / 1234,56 / 1234.56
-  if (x.includes(",")) x = x.replace(/\./g, "").replace(",", ".");
-  const n = Number(x);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function fmtInt(n) {
-  return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
-}
-
-function fmtPct2(x01) {
-  if (!isFinite(x01)) return "-";
-  return (x01 * 100).toFixed(2).replace(".", ",") + "%";
-}
-
 function showError(msg) {
   const el = document.getElementById("msg");
   if (el) el.innerHTML = `<div class="error">${msg}</div>`;
 }
 
 function parseDelimited(text, delimiter = ";") {
-  const out = [];
+  const rows = [];
   let row = [];
   let cur = "";
   let inQuotes = false;
@@ -75,148 +59,149 @@ function parseDelimited(text, delimiter = ";") {
       cur = "";
     } else if (ch === "\n" && !inQuotes) {
       row.push(cur);
-      out.push(row);
+      rows.push(row);
       row = [];
       cur = "";
     } else {
       cur += ch;
     }
   }
-
   if (cur || row.length) {
     row.push(cur);
-    out.push(row);
+    rows.push(row);
   }
-
-  return out;
+  return rows;
 }
 
-function pickHeader(candidates) {
-  return candidates.find(c => headers.includes(c)) || null;
+function toNumber(v) {
+  let x = clean(v);
+  if (!x) return 0;
+  x = x.replace(/\s/g, "");
+  if (x.includes(",")) x = x.replace(/\./g, "").replace(",", ".");
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fmtInt(n) {
+  return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+}
+
+function fmtPct(x) {
+  if (!isFinite(x)) return "-";
+  return (x * 100).toFixed(2).replace(".", ",") + "%";
+}
+
+function pickCol(cands) {
+  return cands.find(c => headersMM.includes(c)) || null;
 }
 
 /* ============================
    FILTER
 ============================ */
-function getFilteredRows() {
-  const sel = document.getElementById("clienteSelect");
-  const c = sel ? sel.value : "";
-  if (!c) return rows;
-  return rows.filter(r => clean(r[H_CLIENTE]) === c);
+function filteredMM() {
+  const sel = document.getElementById("clienteMM");
+  const v = sel?.value || "";
+  if (!v) return rowsMM;
+  return rowsMM.filter(r => clean(r[COL_ALMACEN]) === v);
 }
 
 /* ============================
-   CLIENTES
+   UI: Select cliente
 ============================ */
-function renderClientes() {
-  const sel = document.getElementById("clienteSelect");
+function renderClientesMM() {
+  const sel = document.getElementById("clienteMM");
   if (!sel) return;
 
+  // limpiar opciones salvo "Todos"
   sel.querySelectorAll("option:not([value=''])").forEach(o => o.remove());
 
-  const clientes = [...new Set(rows.map(r => clean(r[H_CLIENTE])).filter(Boolean))]
-    .sort((a,b) => a.localeCompare(b, "es"));
+  const values = [...new Set(rowsMM.map(r => clean(r[COL_ALMACEN])).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,"es"));
 
-  for (const c of clientes) {
+  for (const v of values) {
     const o = document.createElement("option");
-    o.value = c;
-    o.textContent = c;
+    o.value = v;
+    o.textContent = v;
     sel.appendChild(o);
   }
 }
 
 /* ============================
-   KPIs
+   CALCS
 ============================ */
-function calcKPIs(rs) {
-  const allMaterials = new Set();
-  const dispMaterials = new Set();
-
-  for (const r of rs) {
-    const mat = clean(r[H_MATERIAL]);
-    if (!mat) continue;
-
-    allMaterials.add(mat);
-
-    const libre = toNumber(r[H_LIBRE]);
-    if (libre > 0) dispMaterials.add(mat);
+function distinctMaterials(rows) {
+  const s = new Set();
+  for (const r of rows) {
+    const m = clean(r[COL_MATERIAL]);
+    if (m) s.add(m);
   }
-
-  const total = allMaterials.size;
-  const disp = dispMaterials.size;
-  const pct = total ? disp / total : NaN;
-
-  return { total, disp, pct };
+  return s;
 }
 
-/* ============================
-   ESTADOS (conteo por materiales)
-============================ */
-function calcEstados(rs) {
-  // estado -> set(material)
+function distinctMaterialsDisponible(rows) {
+  const s = new Set();
+  for (const r of rows) {
+    const m = clean(r[COL_MATERIAL]);
+    if (!m) continue;
+    const libre = toNumber(r[COL_LIBRE]);
+    if (libre > 0) s.add(m);
+  }
+  return s;
+}
+
+function aggByEstado(rows) {
+  // estado -> Set(material)
   const map = new Map();
 
-  for (const r of rs) {
-    const estado = clean(r[H_ESTADO]) || "(Sin estado)";
-    const mat = clean(r[H_MATERIAL]);
+  for (const r of rows) {
+    const estado = clean(r[COL_ESTADO]) || "(Sin estado)";
+    const mat = clean(r[COL_MATERIAL]);
     if (!mat) continue;
 
     if (!map.has(estado)) map.set(estado, new Set());
     map.get(estado).add(mat);
   }
 
-  // total materiales distintos (para %)
-  const totalSet = new Set();
-  for (const r of rs) {
-    const mat = clean(r[H_MATERIAL]);
-    if (mat) totalSet.add(mat);
-  }
+  const totalSet = distinctMaterials(rows);
   const total = totalSet.size || 0;
 
-  const items = [...map.entries()].map(([estado, setMat]) => ({
+  const arr = [...map.entries()].map(([estado, set]) => ({
     estado,
-    cant: setMat.size,
-    pct: total ? setMat.size / total : NaN
+    cant: set.size,
+    pct: total ? set.size / total : 0
   }));
 
-  // Orden: por número inicial "1-", "2-", etc si existe; sino por cant desc
-  items.sort((a,b) => {
-    const na = (a.estado.match(/^(\d+)/)?.[1]) ? parseInt(a.estado.match(/^(\d+)/)[1],10) : null;
-    const nb = (b.estado.match(/^(\d+)/)?.[1]) ? parseInt(b.estado.match(/^(\d+)/)[1],10) : null;
-    if (na != null && nb != null && na !== nb) return na - nb;
-    if (na != null && nb == null) return -1;
-    if (na == null && nb != null) return 1;
-    return b.cant - a.cant;
-  });
+  // ordenar por cantidad desc
+  arr.sort((a,b) => b.cant - a.cant);
 
-  return { total, items };
-}
-
-function estadoColor(estado) {
-  const s = (estado || "").toString();
-  if (/^1\b|^1-/.test(s)) return "#ef4444"; // rojo
-  if (/^2\b|^2-/.test(s)) return "#f59e0b"; // amarillo/ámbar
-  if (/^3\b|^3-/.test(s)) return "#16a34a"; // verde
-  if (/^4\b|^4-/.test(s)) return "#0b7a4a"; // verde oscuro
-  // fallback (grises/azules)
-  return "#1d4ed8";
+  return { arr, total };
 }
 
 /* ============================
-   UI RENDER
+   RENDER KPIs
 ============================ */
-function renderKPIs(rs) {
-  const k = calcKPIs(rs);
-  document.getElementById("kpiMat").textContent = fmtInt(k.total);
-  document.getElementById("kpiDispQty").textContent = fmtInt(k.disp);
-  document.getElementById("kpiDispPct").textContent = fmtPct2(k.pct);
+function renderKPIs(rows) {
+  const totalMat = distinctMaterials(rows).size;
+  const dispMat = distinctMaterialsDisponible(rows).size;
+  const pct = totalMat ? dispMat / totalMat : NaN;
+
+  document.getElementById("kpiMat").textContent = fmtInt(totalMat);
+  document.getElementById("kpiDispQty").textContent = fmtInt(dispMat);
+  document.getElementById("kpiDispPct").textContent = isFinite(pct) ? fmtPct(pct) : "-";
 }
 
-function renderTablaEstados(est) {
-  const tb = document.getElementById("tbodyEstados");
-  tb.innerHTML = "";
+/* ============================
+   TABLE
+============================ */
+function renderTableEstados(rows) {
+  const tbody = document.querySelector("#tblEstados tbody");
+  if (!tbody) return;
 
-  for (const it of est.items) {
+  const { arr, total } = aggByEstado(rows);
+
+  tbody.innerHTML = "";
+
+  for (const it of arr) {
     const tr = document.createElement("tr");
 
     const tdE = document.createElement("td");
@@ -228,118 +213,81 @@ function renderTablaEstados(est) {
 
     const tdP = document.createElement("td");
     tdP.className = "num";
-    tdP.textContent = fmtPct2(it.pct);
+    tdP.textContent = fmtPct(it.pct);
 
     tr.appendChild(tdE);
     tr.appendChild(tdC);
     tr.appendChild(tdP);
-    tb.appendChild(tr);
+
+    tbody.appendChild(tr);
   }
 
-  document.getElementById("totalMat").textContent = fmtInt(est.total);
+  document.getElementById("totalMat").textContent = fmtInt(total);
+  document.getElementById("totalPct").textContent = "100,00%";
+
+  return arr;
 }
 
-function renderDonut(est) {
+/* ============================
+   CHART (dona)
+============================ */
+function renderChartEstados(arr) {
   const canvas = document.getElementById("chartEstados");
   if (!canvas) return;
 
-  const labels = est.items.map(x => x.estado);
-  const data = est.items.map(x => x.cant);
-  const colors = est.items.map(x => estadoColor(x.estado));
+  const labels = arr.map(x => x.estado);
+  const data = arr.map(x => x.cant);
 
   if (chartEstados) chartEstados.destroy();
-
-  Chart.register(ChartDataLabels);
 
   chartEstados = new Chart(canvas.getContext("2d"), {
     type: "doughnut",
     data: {
       labels,
-      datasets: [{
-        data,
-        backgroundColor: colors,
-        borderWidth: 0
-      }]
+      datasets: [{ data }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: "62%",
       plugins: {
-        legend: { display: false },
+        legend: { position: "right" },
         tooltip: {
           callbacks: {
-            label: (ctx) => {
-              const val = ctx.parsed ?? 0;
-              const total = data.reduce((a,b)=>a+b,0) || 0;
-              const pct = total ? (val/total) : 0;
-              return ` ${ctx.label}: ${fmtInt(val)} (${fmtPct2(pct)})`;
+            label: (c) => {
+              const v = c.parsed ?? 0;
+              const total = c.dataset.data.reduce((a,b)=>a+b,0) || 1;
+              const pct = (v/total)*100;
+              return ` ${c.label}: ${fmtInt(v)} (${pct.toFixed(2).replace(".", ",")}%)`;
             }
           }
-        },
-        datalabels: {
-          formatter: (value, ctx) => {
-            const total = data.reduce((a,b)=>a+b,0) || 0;
-            if (!total || !value) return "";
-            const pct = value / total;
-            // si es muy chiquito, no muestres
-            if (pct < 0.06) return "";
-            return `${fmtInt(value)} (${(pct*100).toFixed(2).replace(".", ",")}%)`;
-          },
-          color: "#111827",
-          font: { weight: "900", size: 12 },
-          anchor: "end",
-          align: "end",
-          offset: 8,
-          clamp: true
         }
       }
     }
   });
-
-  // Leyenda custom a la derecha/abajo
-  const leg = document.getElementById("legendEstados");
-  if (!leg) return;
-
-  leg.innerHTML = "";
-  est.items.forEach((it, i) => {
-    const row = document.createElement("div");
-    row.className = "mm-legend-item";
-
-    const dot = document.createElement("span");
-    dot.className = "mm-dot";
-    dot.style.background = colors[i];
-
-    const txt = document.createElement("span");
-    txt.className = "mm-legend-text";
-    txt.textContent = it.estado;
-
-    row.appendChild(dot);
-    row.appendChild(txt);
-    leg.appendChild(row);
-  });
 }
 
-function applyAll() {
-  const rs = getFilteredRows();
-  renderKPIs(rs);
-
-  const est = calcEstados(rs);
-  renderTablaEstados(est);
-  renderDonut(est);
+/* ============================
+   APPLY
+============================ */
+function applyMM() {
+  const rows = filteredMM();
+  renderKPIs(rows);
+  const arr = renderTableEstados(rows) || [];
+  renderChartEstados(arr);
 }
 
 /* ============================
    INIT
 ============================ */
 window.addEventListener("DOMContentLoaded", () => {
+  // fecha “hoy”
   const d = new Date();
   document.getElementById("lastUpdate").textContent =
     `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 
-  fetch(csvUrl)
+  fetch(csvUrlMM)
     .then(r => {
-      if (!r.ok) throw new Error(`No pude abrir ${csvUrl} (HTTP ${r.status})`);
+      if (!r.ok) throw new Error(`No pude abrir ${csvUrlMM} (HTTP ${r.status})`);
       return r.text();
     })
     .then(text => {
@@ -349,42 +297,49 @@ window.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      headers = m[0].map(clean);
+      headersMM = m[0].map(clean);
 
-      H_CLIENTE = pickHeader(COL_CLIENTE);
-      H_MATERIAL = pickHeader(COL_MATERIAL);
-      H_LIBRE = pickHeader(COL_LIBRE);
-      H_ESTADO = pickHeader(COL_ESTADO);
+      COL_ALMACEN = pickCol(ALMACEN_CAND);
+      COL_MATERIAL = pickCol(MATERIAL_CAND);
+      COL_LIBRE = pickCol(LIBRE_CAND);
+      COL_ESTADO = pickCol(ESTADO_CAND);
 
-      const miss = [];
-      if (!H_CLIENTE) miss.push("ALMACEN");
-      if (!H_MATERIAL) miss.push("Material");
-      if (!H_LIBRE) miss.push("LIBRE UTILIZACION");
-      if (!H_ESTADO) miss.push("estado/ESTADO");
+      const missing = [];
+      if (!COL_ALMACEN) missing.push("ALMACEN");
+      if (!COL_MATERIAL) missing.push("Material");
+      if (!COL_LIBRE) missing.push("LIBRE UTILIZACION");
+      if (!COL_ESTADO) missing.push("Estado");
 
-      if (miss.length) {
-        showError("Faltan columnas en ANALISIS-MM.csv: " + miss.join(", "));
+      if (missing.length) {
+        showError(
+          "No pude encontrar columnas en ANALISIS-MM.csv: " +
+          missing.join(", ") +
+          "<br><br>Columnas detectadas:<br>" + headersMM.join(" | ")
+        );
         return;
       }
 
-      rows = m.slice(1).map(line => {
+      rowsMM = m.slice(1).map(row => {
         const o = {};
-        headers.forEach((h, i) => (o[h] = clean(line[i])));
+        headersMM.forEach((h, i) => (o[h] = clean(row[i])));
         return o;
       });
 
-      renderClientes();
-      applyAll();
+      document.getElementById("clienteHint").textContent = `Columna cliente: ${COL_ALMACEN}`;
 
-      document.getElementById("clienteSelect")?.addEventListener("change", applyAll);
-      document.getElementById("btnReset")?.addEventListener("click", () => {
-        document.getElementById("clienteSelect").value = "";
-        applyAll();
+      renderClientesMM();
+      applyMM();
+
+      document.getElementById("clienteMM")?.addEventListener("change", applyMM);
+      document.getElementById("btnResetMM")?.addEventListener("click", () => {
+        const sel = document.getElementById("clienteMM");
+        if (sel) sel.value = "";
+        applyMM();
       });
     })
     .catch(err => {
       console.error(err);
-      showError("Error cargando ANALISIS-MM.csv. Revisá el nombre y que esté en la raíz del repo.");
+      showError("Error cargando ANALISIS-MM.csv. Revisá el nombre del archivo y que esté en la raíz del repo.");
     });
 });
 
