@@ -189,38 +189,59 @@
          VISTA: ANÁLISIS MM
          (sin gráficos: muestra filas del CSV)
     ========================== -->
-    <section id="view-mm" class="view hidden">
-      <section class="panel">
-        <div class="panel-title">ANÁLISIS MM</div>
-        <div class="panel-body">
-          <div class="mm-grid">
-            <div>
-              <div class="mm-label">Archivo</div>
-              <div class="mm-value"><b>ANALISIS-MM.csv</b></div>
-              <div id="mmStatus" class="hint">Listo</div>
-            </div>
+   <section id="view-mm" class="view hidden">
+  <div class="mm-topbar">
+    <div class="mm-title">DISPONIBILIDAD</div>
+  </div>
 
-            <div>
-              <div class="mm-label">Acciones</div>
-              <button id="mmReload" class="btn">↻ Recargar archivo</button>
-              <div class="hint">Si actualizás el CSV en GitHub, tocá recargar.</div>
-            </div>
-          </div>
-
-          <hr class="sep" />
-
-          <h3 class="mm-h3">Primera fila del archivo (preview)</h3>
-          <div class="table-wrap">
-            <table id="mmFirstRow" class="table"></table>
-          </div>
-
-          <h3 class="mm-h3" style="margin-top:18px;">Primeras 30 filas (opcional)</h3>
-          <div class="table-wrap">
-            <table id="mmTable" class="table"></table>
-          </div>
+  <section class="mm-layout">
+    <!-- Izquierda -->
+    <div class="mm-left">
+      <div class="mm-filter-card">
+        <div class="mm-filter-head">CLIENTE</div>
+        <div class="mm-filter-body">
+          <select id="mmClienteSelect" class="mm-select">
+            <option value="">Todos</option>
+          </select>
+          <div id="mmStatus" class="mm-hint">Listo</div>
+          <button id="mmReload" class="btn mm-btn">↻ Recargar archivo</button>
         </div>
-      </section>
-    </section>
+      </div>
+
+      <div id="mmTablaEstados" class="mm-table-wrap"></div>
+    </div>
+
+    <!-- Derecha -->
+    <div class="mm-right">
+      <div class="mm-kpi-row">
+        <div class="mm-kpi">
+          <div class="mm-kpi-head">CANT MATERIALES</div>
+          <div id="mmKpiTotal" class="mm-kpi-val">-</div>
+        </div>
+
+        <div class="mm-kpi">
+          <div class="mm-kpi-head">CANT DISPONIBLE</div>
+          <div id="mmKpiDisp" class="mm-kpi-val">-</div>
+        </div>
+
+        <div class="mm-kpi">
+          <div class="mm-kpi-head">DISPONIBLE</div>
+          <div id="mmKpiPct" class="mm-kpi-val">-</div>
+        </div>
+      </div>
+
+      <div class="mm-donut-card">
+        <div class="mm-donut-wrap">
+          <canvas id="mmDonut"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footnote">
+    Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”).
+  </footer>
+</section>
 
     <!-- =========================
          VISTA: DEMORAS (placeholder)
@@ -246,5 +267,6 @@
   <script src="router.js"></script>
 </body>
 </html>
+
 
 
