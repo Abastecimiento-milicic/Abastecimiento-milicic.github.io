@@ -131,6 +131,9 @@ body{
   gap: 14px;
   align-items:end;
 }
+.mm-filters{
+  grid-template-columns: 1.2fr 0.8fr;
+}
 .filter label{
   display:block;
   font-size: 12px;
@@ -181,6 +184,7 @@ select:focus{
   gap: 14px;
 }
 .kpi-grid-4{ grid-template-columns: repeat(4, 1fr); }
+.kpi-grid-3{ grid-template-columns: repeat(3, 1fr); }
 
 .kpi{
   border-radius: 16px;
@@ -230,7 +234,6 @@ select:focus{
   background: rgba(2,8,20,.03);
 }
 
-/* NUMEROS OSCUROS (como Power BI) */
 .kpi-value{
   margin-top: 8px;
   font-size: 44px;
@@ -238,8 +241,6 @@ select:focus{
   color: #0a1020;
   letter-spacing: .2px;
 }
-
-/* subtexto (Cant:...) mas grande */
 .kpi-sub{
   margin-top: 10px;
   color: var(--muted);
@@ -297,15 +298,96 @@ select:focus{
   font-size: 13px;
 }
 
+/* ============================
+   ANÁLISIS MM extras
+============================ */
+.mm-grid{
+  display:grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.table-wrap{
+  overflow:auto;
+  border-radius: 12px;
+  border: 1px solid rgba(2,8,20,.10);
+}
+
+.mm-table{
+  width:100%;
+  border-collapse: collapse;
+  font-weight: 800;
+  font-size: 14px;
+}
+.mm-table thead th{
+  position: sticky;
+  top: 0;
+  background: #0b1220;
+  color: #fff;
+  padding: 10px 10px;
+  text-align:left;
+}
+.mm-table th.num, .mm-table td.num{
+  text-align:right;
+}
+.mm-table tbody td{
+  padding: 9px 10px;
+  border-top: 1px solid rgba(2,8,20,.08);
+  background: #fff;
+}
+.mm-table tbody tr:hover td{
+  background: rgba(2,8,20,.03);
+}
+.mm-table tfoot td{
+  padding: 10px 10px;
+  border-top: 2px solid rgba(2,8,20,.15);
+  background: rgba(2,8,20,.03);
+  font-weight: 1000;
+}
+
+.mm-donut{
+  height: 420px;
+}
+
+.mm-legend{
+  margin-top: 10px;
+  display:flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 6px;
+}
+.mm-legend-item{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  font-weight: 900;
+  color: #0b1220;
+}
+.mm-dot{
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display:inline-block;
+  border: 1px solid rgba(2,8,20,.15);
+}
+.mm-legend-text{
+  font-size: 14px;
+}
+
 /* RESPONSIVE */
 @media (max-width: 1100px){
   .filters{ grid-template-columns: 1fr; }
+  .mm-filters{ grid-template-columns: 1fr; }
   .kpi-grid{ grid-template-columns: 1fr 1fr; }
+  .kpi-grid-3{ grid-template-columns: 1fr; }
+  .mm-grid{ grid-template-columns: 1fr; }
 }
 @media (max-width: 640px){
   .kpi-grid{ grid-template-columns: 1fr; }
   .kpi-value{ font-size: 40px; }
   .chart-wrap{ height: 320px; }
+  .mm-donut{ height: 360px; }
 }
 
 /* TV / Monitor obra */
@@ -314,6 +396,7 @@ select:focus{
   .kpi-value{ font-size: 54px; }
   .kpi-sub-strong{ font-size: 18px; }
   .chart-wrap{ height: 420px; }
+  .mm-donut{ height: 520px; }
   .title{ font-size: 26px; }
 }
 
