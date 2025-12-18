@@ -1,172 +1,98 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Abastecimiento - Milicic</title>
+  <meta charset="UTF-8" />
+  <title>Abastecimiento – Milicic</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <div class="title">ABASTECIMIENTO</div>
-      <div class="subtitle">Panel de control</div>
-      <div class="status" id="globalStatus">Listo</div>
+
+<header class="topbar">
+  <div>
+    <h1>ABASTECIMIENTO</h1>
+    <div class="subtitle">Panel de control</div>
+    <div class="status" id="globalStatus">Listo</div>
+  </div>
+  <div class="update-box">
+    <div class="update-label">Última actualización</div>
+    <div id="lastUpdate">—</div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-view="home">INICIO</button>
+  <button class="tab" data-view="mm">ANÁLISIS MM</button>
+  <button class="tab" data-view="cump">CUMPLIMIENTO</button>
+</nav>
+
+<main class="container">
+
+<!-- INICIO -->
+<section id="home" class="view">
+  <div class="panel">
+    <div class="panel-title">Inicio</div>
+    <div class="panel-body">
+      Usá las pestañas para ver <b>ANÁLISIS MM</b> (ANALISIS-MM.csv)
+      y <b>CUMPLIMIENTO</b> (CUMPLIMIENTO.csv).
     </div>
-    <div class="update-box">
-      <div class="update-label">Última actualización</div>
-      <div class="update-date" id="lastUpdate">—</div>
+  </div>
+</section>
+
+<!-- ANALISIS MM -->
+<section id="mm" class="view hidden">
+
+  <div class="panel">
+    <div class="panel-title">ANÁLISIS MM</div>
+    <div class="panel-body">
+
+      <label>Cliente (ALMACEN)</label>
+      <select id="mmCliente"></select>
+
+      <div class="kpis">
+        <div class="kpi">
+          <span>Materiales</span>
+          <b id="kpiMat">0</b>
+        </div>
+        <div class="kpi">
+          <span>Disponibles</span>
+          <b id="kpiDisp">0</b>
+        </div>
+        <div class="kpi">
+          <span>% Disponible</span>
+          <b id="kpiPct">0%</b>
+        </div>
+      </div>
+
+      <canvas id="mmChart" height="120"></canvas>
+
+      <h3>Estados</h3>
+      <table id="mmTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+
     </div>
-  </header>
+  </div>
+</section>
 
-  <nav class="tabs">
-    <button class="tab active" id="tab-home" data-view="view-home">INICIO</button>
-    <button class="tab" id="tab-mm" data-view="view-mm">ANÁLISIS MM</button>
-    <button class="tab" id="tab-cump" data-view="view-cump">CUMPLIMIENTO</button>
-  </nav>
+<!-- CUMPLIMIENTO -->
+<section id="cump" class="view hidden">
+  <div class="panel">
+    <div class="panel-title">CUMPLIMIENTO</div>
+    <div class="panel-body">
+      <table id="cumpTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
-  <main class="container">
+</main>
 
-    <!-- INICIO -->
-    <section class="view" id="view-home">
-      <div class="panel">
-        <div class="panel-title">Inicio</div>
-        <div class="panel-body">
-          <div class="hint">
-            Usá las pestañas para ver <b>ANÁLISIS MM</b> (archivo <b>ANALISIS-MM.csv</b>) y <b>CUMPLIMIENTO</b> (archivo <b>CUMPLIMIENTO.csv</b>).
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ANÁLISIS MM -->
-    <section class="view hidden" id="view-mm">
-      <div class="mm-topbar">
-        <div class="mm-title">ANÁLISIS MM — DISPONIBILIDAD</div>
-      </div>
-
-      <div class="mm-layout">
-        <!-- IZQUIERDA -->
-        <div class="mm-left">
-          <div class="mm-filter-card">
-            <div class="mm-filter-head">CLIENTE</div>
-            <div class="mm-filter-body">
-              <select class="mm-select" id="mmCliente"></select>
-              <div class="mm-hint">Cliente = columna <b>ALMACEN</b></div>
-              <button class="btn mm-btn" id="mmRefresh">Actualizar</button>
-              <div class="mm-hint" id="mmStatus">—</div>
-            </div>
-          </div>
-
-          <div class="mm-table-wrap">
-            <table class="mm-table" id="mmEstadosTable">
-              <thead>
-                <tr>
-                  <th>ESTADOS</th>
-                  <th class="num">MATERIALES</th>
-                  <th class="num">LIBRE UTILIZACIÓN</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-              <tfoot>
-                <tr>
-                  <td>TOTAL</td>
-                  <td class="num" id="mmTotMat">0</td>
-                  <td class="num" id="mmTotLibre">0</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          <div class="footnote">
-            * Materiales = distintos por estado. Libre Utilización = suma (solo para mostrar referencia).
-          </div>
-        </div>
-
-        <!-- DERECHA -->
-        <div class="mm-right">
-          <div class="mm-kpi-row">
-            <div class="mm-kpi">
-              <div class="mm-kpi-head">Cantidad de materiales</div>
-              <div class="mm-kpi-val" id="kpiMat">0</div>
-            </div>
-            <div class="mm-kpi">
-              <div class="mm-kpi-head">Cantidad disponible</div>
-              <div class="mm-kpi-val" id="kpiDisp">0</div>
-            </div>
-            <div class="mm-kpi">
-              <div class="mm-kpi-head">Disponible</div>
-              <div class="mm-kpi-val" id="kpiPct">0%</div>
-            </div>
-          </div>
-
-          <div class="mm-donut-card">
-            <div class="mm-hint" style="margin-bottom:10px;">Distribución por estado</div>
-            <div class="mm-donut-wrap">
-              <canvas id="mmDonut"></canvas>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-title">Vista previa (primeras 10 filas filtradas)</div>
-            <div class="panel-body">
-              <div class="mm-hint" id="mmPreviewHint">—</div>
-              <div style="overflow:auto;">
-                <table class="mm-table" id="mmPreviewTable">
-                  <thead></thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- CUMPLIMIENTO -->
-    <section class="view hidden" id="view-cump">
-      <div class="panel">
-        <div class="panel-title">CUMPLIMIENTO</div>
-        <div class="panel-body">
-
-          <div class="cump-controls">
-            <div class="cump-control">
-              <div class="cump-label">Filtro (si existe columna PROYECTO / OBRA / ALMACEN)</div>
-              <select class="cump-select" id="cumpFiltro"></select>
-            </div>
-
-            <button class="btn" id="cumpRefresh">Actualizar</button>
-
-            <div class="cump-msg" id="cumpStatus">—</div>
-          </div>
-
-          <div class="panel" style="margin-top:14px;">
-            <div class="panel-title">Vista previa (primeras 30 filas filtradas)</div>
-            <div class="panel-body">
-              <div style="overflow:auto;">
-                <table class="mm-table" id="cumpTable">
-                  <thead></thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div class="footnote">
-            Si querés que Cumplimiento muestre KPIs específicos (entregados a término, vencidos, %), decime qué columnas exactas trae tu <b>CUMPLIMIENTO.csv</b>.
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <script src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
-
-
