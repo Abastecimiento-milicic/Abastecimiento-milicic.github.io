@@ -298,12 +298,6 @@ function updateKPIsMonthly(rows, months) {
   const dFT = deltaInfo(cur.pctFT, prev.pctFT);
   const dNO = deltaInfo(cur.pctNO, prev.pctNO);
 
-  /*
-    REGLAS:
-    AT: baja = rojo, sube o se mantiene = verde
-    FT: sube o se mantiene = rojo, baja = verde
-    NO: sube = rojo, baja o se mantiene = verde
-  */
   let clsAT = "delta-good";
   if (dAT.diff < 0) clsAT = "delta-bad";
 
@@ -489,7 +483,14 @@ function buildChartTendencia(rows) {
       plugins: {
         legend: { position: "bottom" },
         tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%` } },
-        datalabels: { align: "top", anchor: "end", offset: 6, formatter: (v) => `${Number(v).toFixed(0)}%`, color: COLORS.text, font: { size: 11, weight: "900" } }
+        datalabels: {
+          align: "top",
+          anchor: "end",
+          offset: 6,
+          formatter: (v) => `${Number(v).toFixed(0)}%`,
+          color: COLORS.text,
+          font: { size: 11, weight: "900" }
+        }
       }
     }
   });
@@ -546,6 +547,7 @@ function applyAll() {
 window.addEventListener("DOMContentLoaded", () => {
   applyChartDefaults();
 
+  // fecha “hoy”
   const d = new Date();
   document.getElementById("lastUpdate").textContent =
     `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
