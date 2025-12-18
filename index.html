@@ -13,7 +13,7 @@
   <header class="topbar">
     <div class="topbar-left">
       <div class="title">Control de Compras - Construcción</div>
-      <div class="subtitle">Análisis de Cumplimiento de Pedidos por Obra</div>
+      <div id="subtitle" class="subtitle">Análisis de Cumplimiento de Pedidos por Obra</div>
     </div>
 
     <div class="topbar-right">
@@ -25,9 +25,9 @@
   </header>
 
   <nav class="tabs">
-    <a class="tab active" href="#">CUMPLIMIENTO</a>
-    <a class="tab" href="#" onclick="return false;">ANÁLISIS MM</a>
-    <a class="tab" href="#" onclick="return false;">DEMORAS</a>
+    <a class="tab active" href="#" id="tabCumplimiento">CUMPLIMIENTO</a>
+    <a class="tab" href="#" id="tabAnalisisMM">ANÁLISIS MM</a>
+    <a class="tab disabled" href="#" onclick="return false;">DEMORAS</a>
   </nav>
 
   <main class="container">
@@ -62,7 +62,7 @@
 
     <!-- KPIs ACUMULADO -->
     <section class="panel">
-      <div class="panel-title">CUMPLIMIENTO ACUMULADO (últimos 12 meses)</div>
+      <div id="panelAcumTitle" class="panel-title">CUMPLIMIENTO ACUMULADO (últimos 12 meses)</div>
 
       <div class="panel-body kpi-grid">
         <div class="kpi kpi-blue">
@@ -105,7 +105,7 @@
 
     <!-- KPIs MES -->
     <section class="panel">
-      <div class="panel-title">CUMPLIMIENTO - MES SELECCIONADO</div>
+      <div id="panelMesTitle" class="panel-title">CUMPLIMIENTO - MES SELECCIONADO</div>
 
       <div class="panel-body kpi-grid kpi-grid-4">
         <div class="kpi kpi-blue">
@@ -148,7 +148,7 @@
 
     <!-- GRAFICO 100% APILADO -->
     <section class="panel">
-      <div class="panel-title">CUMPLIMIENTO POR MES (100% APILADO)</div>
+      <div id="panelBarTitle" class="panel-title">CUMPLIMIENTO POR MES (100% APILADO)</div>
       <div class="panel-body">
         <div class="chart-card">
           <div class="chart-title">Cantidad y % por mes</div>
@@ -159,9 +159,9 @@
       </div>
     </section>
 
-    <!-- TENDENCIA (ABAJO) -->
+    <!-- TENDENCIA -->
     <section class="panel">
-      <div class="panel-title">TENDENCIA DE CUMPLIMIENTO</div>
+      <div id="panelTrendTitle" class="panel-title">TENDENCIA DE CUMPLIMIENTO</div>
       <div class="panel-body">
         <div class="chart-card">
           <div class="chart-title">AT % / FT % / NO %</div>
@@ -172,7 +172,7 @@
       </div>
     </section>
 
-    <footer class="footnote">
+    <footer id="footnote" class="footnote">
       Fuente: <b>CUMPLIMIENTO_2025.csv</b> (delimitador “;”) · Cálculo: AT/FT/NO por mes (FECHA ENTREGA ESPERADA).
     </footer>
   </main>
