@@ -2,7 +2,7 @@
    APP.JS — Cumplimiento (CSV ';') + barras 100% + líneas arriba
 ========================================================= */
 
-const csvUrl = "./CUMPLIMIENTO_2025.csv";
+const csvUrl = "./CUMPLIMIENTO.csv";
 const DELIM = ";";
 
 const FECHA_COL = "FECHA ENTREGA ESPERADA";
@@ -506,3 +506,4 @@ window.addEventListener("DOMContentLoaded", async ()=>{
     errorUI(e.message || String(e));
   }
 });
+
