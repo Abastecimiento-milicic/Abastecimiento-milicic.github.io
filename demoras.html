@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Demoras</title>
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Por si después querés gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="title">Control de Compras - Construcción</div>
+      <div class="subtitle">Demoras</div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="update-box">
+        <div class="update-label">Última actualización</div>
+        <div id="lastUpdate" class="update-date">--/--/----</div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <a class="tab" href="index.html">CUMPLIMIENTO</a>
+    <a class="tab" href="analisis-mm.html">ANÁLISIS MM</a>
+    <a class="tab active" href="demoras.html">DEMORAS</a>
+  </nav>
+
+  <main class="container">
+    <div id="msg"></div>
+
+    <section class="panel">
+      <div class="panel-title">DEMORAS</div>
+      <div class="panel-body">
+        <p style="font-weight:800;margin:0 0 8px;">
+          Página lista para nuevos gráficos / tablas. (Sin contenido por ahora)
+        </p>
+        <div class="hint" id="fileHint">Fuente: DEMORAS.CSV (delimitador “;”)</div>
+      </div>
+    </section>
+
+    <footer class="footnote">
+      Fuente: <b>DEMORAS.CSV</b> (delimitador “;”)
+    </footer>
+  </main>
+
+  <script src="demoras.js"></script>
+</body>
+</html>
