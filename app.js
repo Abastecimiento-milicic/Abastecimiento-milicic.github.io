@@ -11,12 +11,15 @@ const AT_COL = "ENTREGADOS AT";
 const FT_COL = "ENTREGADOS FT";
 const NO_COL = "NO ENTREGADOS";
 
+const DEMORA_COL = "DIAS DE DEMORA"; // <-- NUEVO
+
 /* ============================
    COLORES (match KPIs)
 ============================ */
 const COLORS = {
   blue:  "#1d4ed8",
   green: "#16a34a",
+  greenDark: "#0a5a2a",  // <-- 75% line
   amber: "#f59e0b",
   red:   "#ef4444",
   grid:  "rgba(15, 23, 42, 0.10)",
@@ -186,7 +189,6 @@ function buildMesSelect(rows) {
     sel.appendChild(o);
   }
 
-  // por defecto: último mes disponible
   sel.value = months.includes(prevSelected) ? prevSelected : (months[months.length - 1] || "");
 
   const hint = document.getElementById("mesHint");
@@ -331,7 +333,6 @@ function applyChartDefaults() {
   Chart.defaults.interaction.mode = "index";
   Chart.defaults.interaction.intersect = false;
 
-  // Tooltip estilo “Power BI”
   Chart.defaults.plugins.tooltip.backgroundColor = "rgba(255,255,255,0.97)";
   Chart.defaults.plugins.tooltip.titleColor = COLORS.text;
   Chart.defaults.plugins.tooltip.bodyColor = COLORS.text;
@@ -342,7 +343,7 @@ function applyChartDefaults() {
 }
 
 /* ============================
-   CHART 1: 100% stacked bar
+   CHART 1: 100% stacked bar + líneas constantes + demora promedio
 ============================ */
 function buildChartMes(rows) {
   const agg = new Map();
@@ -355,12 +356,18 @@ function buildChartMes(rows) {
     const mk = monthKey(d);
     monthsSet.add(mk);
 
-    if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0 });
+    if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0, demoraSum: 0, demoraCnt: 0 });
     const c = agg.get(mk);
 
     c.at += toNumber(r[AT_COL]);
     c.ft += toNumber(r[FT_COL]);
     c.no += toNumber(r[NO_COL]);
+
+    const dd = toNumber(r[DEMORA_COL]);
+    if (dd > 0 || clean(r[DEMORA_COL]) !== "") {
+      c.demoraSum += dd;
+      c.demoraCnt += 1;
+    }
   }
 
   const months = [...monthsSet].sort();
@@ -372,6 +379,20 @@ function buildChartMes(rows) {
   const pFT = qFT.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t)*100 : 0; });
   const pNO = qNO.map((v,i)=>{ const t=qAT[i]+qFT[i]+qNO[i]; return t? (v/t)*100 : 0; });
 
+  const demoraAvg = months.map(m => {
+    const c = agg.get(m);
+    if (!c || !c.demoraCnt) return 0;
+    return c.demoraSum / c.demoraCnt;
+  });
+
+  // Escala derecha: incluir línea fija de 7
+  const maxDemora = Math.max(7, ...demoraAvg, 0);
+  const suggestedMaxY2 = Math.ceil(maxDemora * 1.25);
+
+  // Líneas constantes
+  const line75 = months.map(() => 75); // eje izquierdo (%)
+  const line7  = months.map(() => 7);  // eje derecho (días)
+
   const canvas = document.getElementById("chartMes");
   if (!canvas) return;
 
@@ -382,9 +403,59 @@ function buildChartMes(rows) {
     data: {
       labels: months,
       datasets: [
-        { label: "Entregados AT", data: pAT, _q: qAT, stack:"s", backgroundColor: COLORS.green },
-        { label: "Entregados FT", data: pFT, _q: qFT, stack:"s", backgroundColor: COLORS.amber },
-        { label: "No entregados", data: pNO, _q: qNO, stack:"s", backgroundColor: COLORS.red },
+        // barras
+        { label: "Entregados AT", data: pAT, _q: qAT, stack:"s", backgroundColor: COLORS.green, yAxisID: "y" },
+        { label: "Entregados FT", data: pFT, _q: qFT, stack:"s", backgroundColor: COLORS.amber, yAxisID: "y" },
+        { label: "No entregados", data: pNO, _q: qNO, stack:"s", backgroundColor: COLORS.red, yAxisID: "y" },
+
+        // 75% constante (verde oscuro, punteada) eje izquierdo
+        {
+          type: "line",
+          label: "Meta 75%",
+          data: line75,
+          yAxisID: "y",
+          borderColor: COLORS.greenDark,
+          borderWidth: 2,
+          borderDash: [6, 6],
+          pointRadius: 0,
+          tension: 0,
+          datalabels: { display: false }
+        },
+
+        // Demora promedio (eje derecho)
+        {
+          type: "line",
+          label: "Prom. días de demora",
+          data: demoraAvg,
+          yAxisID: "y2",
+          borderColor: "#ff00b8",   // similar al magenta de tu ejemplo Power BI
+          backgroundColor: "#ff00b8",
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          tension: 0,
+          datalabels: {
+            align: "top",
+            anchor: "end",
+            formatter: (v) => v ? Math.round(v).toString() : "",
+            color: COLORS.text,
+            font: { size: 11, weight: "900" }
+          }
+        },
+
+        // Línea constante 7 (roja punteada) eje derecho
+        {
+          type: "line",
+          label: "Límite 7 días",
+          data: line7,
+          yAxisID: "y2",
+          borderColor: COLORS.red,
+          borderWidth: 2,
+          borderDash: [6, 6],
+          pointRadius: 0,
+          tension: 0,
+          datalabels: { display: false }
+        },
       ]
     },
     options: {
@@ -398,6 +469,14 @@ function buildChartMes(rows) {
           max:100,
           grid:{ color: COLORS.grid },
           ticks:{ color: COLORS.muted, callback:(v)=> v + "%" }
+        },
+        y2: {
+          position: "right",
+          beginAtZero: true,
+          suggestedMax: suggestedMaxY2,
+          grid: { drawOnChartArea: false }, // no ensucia la grilla del %
+          ticks: { color: COLORS.red }, // como en Power BI (eje derecho rojo)
+          title: { display: true, text: "días de demora", color: COLORS.red, font: { weight: "900" } }
         }
       },
       plugins: {
@@ -405,14 +484,26 @@ function buildChartMes(rows) {
         tooltip: {
           callbacks: {
             label: (c) => {
-              const pct = (c.parsed.y ?? 0).toFixed(1).replace(".", ",");
-              const qty = c.dataset._q?.[c.dataIndex] ?? 0;
-              return ` ${c.dataset.label}: ${fmtInt(qty)} (${pct}%)`;
+              // Barras
+              if (c.dataset.type !== "line" && c.dataset.stack) {
+                const pct = (c.parsed.y ?? 0).toFixed(1).replace(".", ",");
+                const qty = c.dataset._q?.[c.dataIndex] ?? 0;
+                return ` ${c.dataset.label}: ${fmtInt(qty)} (${pct}%)`;
+              }
+              // Líneas
+              if (c.dataset.yAxisID === "y2") {
+                return ` ${c.dataset.label}: ${Number(c.parsed.y ?? 0).toFixed(1).replace(".", ",")} días`;
+              }
+              return ` ${c.dataset.label}: ${Number(c.parsed.y ?? 0).toFixed(1).replace(".", ",")}%`;
             }
           }
         },
         datalabels: {
+          // etiquetas SOLO en barras (no en líneas) y solo si el segmento es “visible”
           formatter: (v, ctx) => {
+            const isLine = ctx.dataset.type === "line";
+            if (isLine) return "";
+
             const qty = ctx.dataset._q?.[ctx.dataIndex] ?? 0;
             if (!qty || v < 7) return "";
             return `${fmtInt(qty)} (${v.toFixed(0)}%)`;
@@ -475,36 +566,9 @@ function buildChartTendencia(rows) {
     data: {
       labels: months,
       datasets: [
-        {
-          label: "A Tiempo %",
-          data: pAT,
-          borderColor: COLORS.green,
-          backgroundColor: COLORS.green,
-          tension: 0,                 // recta
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2
-        },
-        {
-          label: "Fuera Tiempo %",
-          data: pFT,
-          borderColor: COLORS.amber,
-          backgroundColor: COLORS.amber,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2
-        },
-        {
-          label: "No Entregados %",
-          data: pNO,
-          borderColor: COLORS.red,
-          backgroundColor: COLORS.red,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2
-        }
+        { label: "A Tiempo %", data: pAT, borderColor: COLORS.green, backgroundColor: COLORS.green, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
+        { label: "Fuera Tiempo %", data: pFT, borderColor: COLORS.amber, backgroundColor: COLORS.amber, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
+        { label: "No Entregados %", data: pNO, borderColor: COLORS.red, backgroundColor: COLORS.red, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 }
       ]
     },
     options: {
@@ -512,19 +576,12 @@ function buildChartTendencia(rows) {
       maintainAspectRatio: false,
       scales: {
         x: { grid: { color: "transparent" }, ticks: { color: COLORS.muted } },
-        y: {
-          beginAtZero: true,
-          max: 100,
-          grid: { color: COLORS.grid },
-          ticks: { color: COLORS.muted, callback: (v) => v + "%" }
-        }
+        y: { beginAtZero: true, max: 100, grid: { color: COLORS.grid }, ticks: { color: COLORS.muted, callback: (v) => v + "%" } }
       },
       plugins: {
         legend: { position: "bottom" },
         tooltip: {
-          callbacks: {
-            label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%`
-          }
+          callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%` }
         },
         datalabels: {
           align: "top",
@@ -590,7 +647,6 @@ function applyAll() {
 window.addEventListener("DOMContentLoaded", () => {
   applyChartDefaults();
 
-  // fecha “hoy” en header (si querés otra, lo cambiás manual)
   const d = new Date();
   document.getElementById("lastUpdate").textContent =
     `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
@@ -615,7 +671,7 @@ window.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const required = [FECHA_COL, AT_COL, FT_COL, NO_COL];
+      const required = [FECHA_COL, AT_COL, FT_COL, NO_COL, DEMORA_COL];
       const missing = required.filter(c => !headers.includes(c));
       if (missing.length) {
         showError("Faltan columnas en el CSV: " + missing.join(", "));
@@ -650,7 +706,7 @@ window.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        const cols = [CLIENT_COL, FECHA_COL, AT_COL, FT_COL, NO_COL];
+        const cols = [CLIENT_COL, FECHA_COL, AT_COL, FT_COL, NO_COL, DEMORA_COL];
 
         const cliente = safeFilePart(document.getElementById("clienteSelect")?.value || "Todos");
         const mes = safeFilePart(document.getElementById("mesSelect")?.value || "Todos");
@@ -664,4 +720,6 @@ window.addEventListener("DOMContentLoaded", () => {
       showError("Error cargando CSV. Revisá el nombre del archivo y que esté en la raíz del repo.");
     });
 });
+
+
 
