@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Análisis MM</title>
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- (Opcional) si vas a usar gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="title">Control de Compras - Construcción</div>
+      <div class="subtitle">Análisis MM</div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="update-box">
+        <div class="update-label">Última actualización</div>
+        <div id="lastUpdate" class="update-date">--/--/----</div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <a class="tab" href="index.html">CUMPLIMIENTO</a>
+    <a class="tab active" href="analisis-mm.html">ANÁLISIS MM</a>
+    <a class="tab" href="#" onclick="return false;">DEMORAS</a>
+  </nav>
+
+  <main class="container">
+    <div id="msg"></div>
+
+    <!-- PANEL VACÍO LISTO PARA ARMAR NUEVOS GRÁFICOS -->
+    <section class="panel">
+      <div class="panel-title">ANÁLISIS MM</div>
+      <div class="panel-body">
+        <!-- TODO LO NUEVO VA ACÁ -->
+        <div class="hint">
+          Página lista para nuevos gráficos / tablas. (Sin contenido por ahora)
+        </div>
+      </div>
+    </section>
+
+    <footer class="footnote">
+      Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”)
+    </footer>
+  </main>
+
+  <script src="analisis-mm.js"></script>
+</body>
+</html>
