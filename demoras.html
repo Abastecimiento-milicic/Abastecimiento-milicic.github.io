@@ -6,7 +6,6 @@
   <title>Demoras</title>
 
   <link rel="stylesheet" href="styles.css" />
-
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
@@ -37,7 +36,7 @@
 
     <!-- FILTROS -->
     <section class="panel">
-      <div class="panel-body filters filters-2">
+      <div class="panel-body filters filters-demoras">
         <div class="filter">
           <label>CLIENTE</label>
           <select id="clienteSelect">
@@ -54,23 +53,54 @@
       </div>
     </section>
 
-    <!-- TITULO -->
+    <!-- KPIs -->
     <section class="panel">
       <div class="panel-title">ITEMS CUMPLIDOS FT - DESGLOSE POR ÁREA</div>
-      <div class="panel-body">
-        <div class="grid-2">
-          <div class="chart-card">
-            <div class="chart-title">Cantidad de demoras por mes</div>
-            <div class="chart-wrap chart-wrap-sm">
-              <canvas id="chartDemorasMes"></canvas>
-            </div>
+      <div class="panel-body kpi-grid kpi-grid-3">
+        <div class="kpi kpi-blue">
+          <div class="kpi-head">
+            <div class="kpi-title">DEMORAS (MES)</div>
+            <div class="kpi-icon">⏱</div>
           </div>
+          <div id="kpiDemorasMes" class="kpi-value">-</div>
+          <div class="kpi-sub">Cantidad de pedidos con demora</div>
+        </div>
 
-          <div class="chart-card">
-            <div class="chart-title">% de demoras por ÁREA según mes seleccionado</div>
-            <div class="chart-wrap chart-wrap-sm">
-              <canvas id="chartDemorasArea"></canvas>
-            </div>
+        <div class="kpi kpi-amber">
+          <div class="kpi-head">
+            <div class="kpi-title">ÁREA TOP (MES)</div>
+            <div class="kpi-icon">🏷</div>
+          </div>
+          <div id="kpiTopArea" class="kpi-value kpi-value-sm">-</div>
+          <div id="kpiTopAreaSub" class="kpi-sub kpi-sub-strong">-</div>
+        </div>
+
+        <div class="kpi kpi-green">
+          <div class="kpi-head">
+            <div class="kpi-title">% TOP ÁREA</div>
+            <div class="kpi-icon">%</div>
+          </div>
+          <div id="kpiTopPct" class="kpi-value">-</div>
+          <div class="kpi-sub">Sobre demoras del mes</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHARTS -->
+    <section class="panel">
+      <div class="panel-title">GRÁFICOS</div>
+      <div class="panel-body grid-2">
+        <div class="chart-card">
+          <div class="chart-title">Cantidad de demoras por mes</div>
+          <div class="chart-wrap">
+            <canvas id="chartMes"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title">% de demoras por ÁREA (mes seleccionado)</div>
+          <div class="chart-wrap">
+            <canvas id="chartAreas"></canvas>
           </div>
         </div>
       </div>
@@ -78,19 +108,23 @@
 
     <!-- TABLA -->
     <section class="panel">
-      <div class="panel-title">TABLA POR MES Y ÁREA</div>
+      <div class="panel-title">TABLA: DEMORAS POR MES Y ÁREA</div>
       <div class="panel-body">
         <div class="table-wrap">
-          <table id="tablaDemoras" class="tbl"></table>
+          <table class="table" id="tablaAreas">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
     </section>
 
     <footer class="footnote">
-      Fuente: <b>DEMORAS.csv</b> (delimitador “;”)
+      Fuente: <b>DEMORAS.csv</b> (delimitador “;”). Columnas de áreas: detectadas automáticamente.
     </footer>
   </main>
 
   <script src="demoras.js"></script>
 </body>
 </html>
+
