@@ -368,6 +368,60 @@ select:focus{
   .mm-donut{ height: 520px; }
   .title{ font-size: 26px; }
 }
+/* =========================
+   DEMORAS - layout extra
+========================= */
+.filters-2{
+  grid-template-columns: 1.2fr 0.8fr;
+}
+
+.grid-2{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.chart-wrap-sm{ height: 320px; }
+
+.table-wrap{
+  overflow:auto;
+  border-radius: 14px;
+  border: var(--border);
+}
+
+.tbl{
+  width:100%;
+  border-collapse: collapse;
+  background:#fff;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.tbl thead th{
+  position: sticky;
+  top: 0;
+  background: #111827;
+  color: #fff;
+  text-align: left;
+  padding: 10px 10px;
+  z-index: 1;
+}
+
+.tbl tbody td{
+  padding: 8px 10px;
+  border-top: 1px solid rgba(2,8,20,.08);
+}
+
+.tbl tbody tr:nth-child(even){
+  background: rgba(2,8,20,.03);
+}
+
+@media (max-width: 1100px){
+  .grid-2{ grid-template-columns: 1fr; }
+  .filters-2{ grid-template-columns: 1fr; }
+}
+
 
 
 
