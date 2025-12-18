@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Análisis MM</title>
+  <title>Control de Compras - Análisis MM</title>
 
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- (Opcional) si vas a usar gráficos -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
 
 <body>
@@ -35,13 +35,96 @@
   <main class="container">
     <div id="msg"></div>
 
-    <!-- PANEL VACÍO LISTO PARA ARMAR NUEVOS GRÁFICOS -->
+    <!-- FILTRO -->
     <section class="panel">
-      <div class="panel-title">ANÁLISIS MM</div>
-      <div class="panel-body">
-        <!-- TODO LO NUEVO VA ACÁ -->
-        <div class="hint">
-          Página lista para nuevos gráficos / tablas. (Sin contenido por ahora)
+      <div class="panel-body filters mm-filters">
+        <div class="filter">
+          <label>CLIENTE</label>
+          <select id="clienteSelect">
+            <option value="">Todos</option>
+          </select>
+          <div id="clienteHint" class="hint">Columna cliente: ALMACEN</div>
+        </div>
+
+        <div class="filter">
+          <label>&nbsp;</label>
+          <button id="btnReset" class="btn">↺ Reset</button>
+          <div class="hint">Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KPIs -->
+    <section class="panel">
+      <div class="panel-title">DISPONIBILIDAD</div>
+
+      <div class="panel-body kpi-grid kpi-grid-3">
+        <div class="kpi kpi-blue">
+          <div class="kpi-head">
+            <div class="kpi-title">CANT MATERIALES</div>
+            <div class="kpi-icon">📦</div>
+          </div>
+          <div id="kpiMat" class="kpi-value">-</div>
+          <div class="kpi-sub">Materiales distintos</div>
+        </div>
+
+        <div class="kpi kpi-green">
+          <div class="kpi-head">
+            <div class="kpi-title">CANT DISPONIBLE</div>
+            <div class="kpi-icon">✓</div>
+          </div>
+          <div id="kpiDispQty" class="kpi-value">-</div>
+          <div class="kpi-sub">LIBRE UTILIZACION &gt; 0</div>
+        </div>
+
+        <div class="kpi kpi-amber">
+          <div class="kpi-head">
+            <div class="kpi-title">DISPONIBLE</div>
+            <div class="kpi-icon">📈</div>
+          </div>
+          <div id="kpiDispPct" class="kpi-value">-</div>
+          <div class="kpi-sub">% sobre materiales</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABLA + DONUT -->
+    <section class="panel">
+      <div class="panel-title">ESTADOS</div>
+
+      <div class="panel-body mm-grid">
+        <!-- Tabla -->
+        <div class="chart-card">
+          <div class="chart-title">Estados (conteo por materiales)</div>
+
+          <div class="table-wrap">
+            <table class="mm-table">
+              <thead>
+                <tr>
+                  <th>ESTADOS</th>
+                  <th class="num">CANT MATERIALES</th>
+                  <th class="num">%TG CANT MATERIALES</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyEstados"></tbody>
+              <tfoot>
+                <tr>
+                  <td><b>Total</b></td>
+                  <td id="totalMat" class="num">-</td>
+                  <td class="num"><b>100,00%</b></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Donut -->
+        <div class="chart-card">
+          <div class="chart-title">Distribución por estado</div>
+          <div class="chart-wrap mm-donut">
+            <canvas id="chartEstados"></canvas>
+          </div>
+          <div id="legendEstados" class="mm-legend"></div>
         </div>
       </div>
     </section>
