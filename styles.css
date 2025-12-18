@@ -86,10 +86,6 @@ body{
   background: rgba(245,158,11,.18);
   border-color: rgba(245,158,11,.55);
 }
-.tab.disabled{
-  opacity:.45;
-  pointer-events:none;
-}
 
 /* LAYOUT */
 .container{
@@ -311,6 +307,8 @@ select:focus{
   .kpi-value{ font-size: 40px; }
   .chart-wrap{ height: 320px; }
 }
+
+/* TV / Monitor obra */
 @media (min-width: 1600px){
   .container{ max-width: 1700px; }
   .kpi-value{ font-size: 54px; }
@@ -318,5 +316,4 @@ select:focus{
   .chart-wrap{ height: 420px; }
   .title{ font-size: 26px; }
 }
-
 
