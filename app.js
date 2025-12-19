@@ -735,7 +735,7 @@ window.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        const cols = [CLIENT_COL, FECHA_COL, AT_COL, FT_COL, NO_COL];
+        const cols = [CLIENT_COL, FECHA_COL, AT_COL, FT_COL, NO_COL, "CLASIFICACION 2", "Material", "SOLPED", "SOLPED"];
 
         const cliente = safeFilePart(getSel("clienteSelect") || "Todos");
         const c2 = safeFilePart(getSel("clasif2Select") || "Todos");
@@ -754,5 +754,6 @@ window.addEventListener("DOMContentLoaded", () => {
       showError("Error cargando CSV. Revisá el nombre del archivo y que esté en la raíz del repo.");
     });
 });
+
 
 
