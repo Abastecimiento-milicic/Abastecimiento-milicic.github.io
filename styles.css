@@ -1,5 +1,5 @@
 :root{
-  --bg: #f4f6f8;
+  --bg: #f3f6f8;
   --panel: #ffffff;
   --ink: #0b1220;
   --muted: #526172;
@@ -11,10 +11,9 @@
   --amber: #f59e0b;
   --red:   #ef4444;
 
-  --shadow: 0 10px 26px rgba(2,8,20,.10);
-  --shadow2: 0 12px 30px rgba(2,8,20,.12);
+  --shadow: 0 8px 18px rgba(2,8,20,.10);
   --border: 1px solid rgba(2,8,20,.08);
-  --radius: 16px;
+  --radius: 14px;
 }
 
 *{ box-sizing:border-box; }
@@ -26,11 +25,11 @@ body{
   font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
 }
 
-/* TOP BAR */
+/* ================= TOP BAR ================= */
 .topbar{
   background: var(--brand);
   color: #fff;
-  padding: 18px 22px;
+  padding: 16px 22px;
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
@@ -39,12 +38,11 @@ body{
 .title{
   font-size: 22px;
   font-weight: 900;
-  letter-spacing:.2px;
 }
 .subtitle{
   margin-top: 4px;
   font-size: 14px;
-  opacity: .92;
+  opacity: .9;
   font-weight: 600;
 }
 .update-box{
@@ -52,7 +50,7 @@ body{
   background: rgba(255,255,255,.08);
   padding: 10px 12px;
   border-radius: 10px;
-  min-width: 210px;
+  min-width: 200px;
   text-align:right;
 }
 .update-label{
@@ -61,12 +59,11 @@ body{
   font-weight: 700;
 }
 .update-date{
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 900;
-  margin-top: 2px;
 }
 
-/* TABS */
+/* ================= TABS ================= */
 .tabs{
   background: #fff;
   border-bottom: var(--border);
@@ -77,26 +74,26 @@ body{
 .tab{
   text-decoration:none;
   color: var(--brand);
-  font-weight: 900;
+  font-weight: 800;
   border: 2px solid rgba(11,90,70,.25);
-  padding: 10px 14px;
+  padding: 8px 14px;
   border-radius: 10px;
   background: rgba(11,90,70,.05);
+  font-size: 13px;
 }
-.tab:hover{ filter: brightness(0.98); }
 .tab.active{
   background: rgba(245,158,11,.18);
   border-color: rgba(245,158,11,.55);
 }
 
-/* LAYOUT */
+/* ================= LAYOUT ================= */
 .container{
   max-width: 1400px;
   margin: 16px auto 34px;
   padding: 0 16px;
 }
 
-/* PANEL */
+/* ================= PANEL ================= */
 .panel{
   background: var(--panel);
   border: var(--border);
@@ -109,24 +106,14 @@ body{
   background: var(--brand);
   color:#fff;
   font-weight: 900;
-  letter-spacing:.4px;
-  padding: 12px 16px;
-  font-size: 16px;
+  padding: 10px 16px;
+  font-size: 15px;
 }
 .panel-body{
-  padding: 14px 14px 16px;
+  padding: 14px;
 }
 
-.error{
-  background:#fff2f2;
-  border: 1px solid rgba(239,68,68,.35);
-  color:#7a1a1a;
-  padding: 12px 14px;
-  border-radius: 12px;
-  font-weight: 800;
-}
-
-/* FILTERS */
+/* ================= FILTERS ================= */
 .filters{
   display:grid;
   grid-template-columns: 1.2fr 0.8fr 0.9fr;
@@ -135,442 +122,142 @@ body{
 }
 .filter label{
   display:block;
-  font-size: 12px;
-  letter-spacing: .9px;
+  font-size: 11px;
   font-weight: 900;
   color: #314155;
-  margin: 0 0 6px 2px;
+  margin-bottom: 6px;
   text-transform: uppercase;
 }
 select{
   width:100%;
-  padding: 12px 12px;
-  border-radius: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
   border: var(--border);
-  outline: none;
-  font-weight: 800;
-  background: #fff;
-  box-shadow: 0 8px 18px rgba(2,8,20,.06);
-}
-select:focus{
-  border-color: rgba(29,78,216,.55);
-  box-shadow: 0 0 0 4px rgba(29,78,216,.12);
+  font-weight: 700;
 }
 .hint{
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--muted);
-  margin-top: 7px;
+  margin-top: 6px;
 }
+
 .btn{
   width:100%;
-  padding: 12px 12px;
+  padding: 10px 12px;
   border-radius: 12px;
   border: 2px solid rgba(2,8,20,.15);
   background: #f2f2f2;
-  font-weight: 900;
+  font-weight: 800;
   cursor:pointer;
 }
-.btn:hover{ background:#e9eef3; }
+.btn:hover{
+  background:#e9eef3;
+}
 
-/* KPI GRID */
+/* ================= KPI GRID ================= */
+/* 👉 ACA está el cambio: 2 columnas */
 .kpi-grid{
   display:grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
 }
-.kpi-grid-4{ grid-template-columns: repeat(4, 1fr); }
 
 .kpi{
-  border-radius: 16px;
+  border-radius: 14px;
   border: var(--border);
   background:#fff;
-  box-shadow: var(--shadow2);
-  padding: 14px 14px 13px;
+  box-shadow: var(--shadow);
+  padding: 12px;
   position:relative;
-  transition: transform .08s ease, box-shadow .08s ease;
-  min-height: 132px;
 }
-.kpi:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 16px 36px rgba(2,8,20,.14);
-}
+
 .kpi::before{
   content:"";
   position:absolute;
   left:0; top:0; bottom:0;
-  width: 6px;
-  border-radius: 16px 0 0 16px;
+  width: 5px;
+  border-radius: 14px 0 0 14px;
   background: rgba(2,8,20,.15);
 }
+
 .kpi-head{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:10px;
+  gap:8px;
 }
 .kpi-title{
-  font-size: 13px;
-  font-weight: 1000;
+  font-size: 12px;
+  font-weight: 900;
   color: #54657a;
-  letter-spacing: .7px;
   text-transform: uppercase;
 }
 .kpi-icon{
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size: 18px;
+  font-size: 14px;
   border: 1px solid rgba(2,8,20,.08);
   background: rgba(2,8,20,.03);
 }
+
+/* 👉 NÚMEROS MÁS CHICOS */
 .kpi-value{
-  margin-top: 8px;
-  font-size: 44px;
-  font-weight: 1000;
-  color: #0a1020;
-  letter-spacing: .2px;
-}
-.kpi-sub{
-  margin-top: 10px;
-  color: var(--muted);
-  font-weight: 800;
-  font-size: 14px;
-}
-.kpi-sub-strong{
-  font-size: 16px;
+  margin-top: 6px;
+  font-size: 32px;
   font-weight: 900;
+  color: #0a1020;
 }
 
-/* KPI THEMES */
-.kpi-blue::before{ background: var(--blue); }
-.kpi-blue .kpi-icon{ background: rgba(29,78,216,.10); }
-
-.kpi-green::before{ background: var(--green); }
-.kpi-green .kpi-icon{ background: rgba(22,163,74,.10); }
-
-.kpi-amber::before{ background: var(--amber); }
-.kpi-amber .kpi-icon{ background: rgba(245,158,11,.12); }
-
-.kpi-red::before{ background: var(--red); }
-.kpi-red .kpi-icon{ background: rgba(239,68,68,.10); }
-
-/* TABLE + CHART LAYOUT */
-.grid-2{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  align-items: start;
-}
-.card{
-  border: var(--border);
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: var(--shadow);
-  overflow:hidden;
-}
-.card-head{
-  padding: 10px 12px;
-  font-weight: 1000;
-  color:#0b5a46;
-  letter-spacing:.6px;
-  text-transform: uppercase;
-  border-bottom: 1px solid rgba(2,8,20,.06);
-}
-.card-body{ padding: 12px; }
-
-.table{
-  width:100%;
-  border-collapse: collapse;
-  font-weight: 800;
-  font-size: 13px;
-}
-.table th{
-  text-align:left;
-  padding: 10px 10px;
-  background:#0b1220;
-  color:#fff;
-  font-weight: 1000;
-}
-.table td{
-  padding: 9px 10px;
-  border-bottom: 1px solid rgba(2,8,20,.07);
-}
-.table tr:nth-child(even) td{ background: rgba(2,8,20,.03); }
-.table tfoot td{
-  font-weight: 1000;
-  background: rgba(11,90,70,.06);
-}
-
-.chart-wrap{
-  height: 360px;
-  width: 100%;
-}
-
-/* FOOTER */
-.footnote{
-  margin-top: 12px;
+.kpi-sub{
+  margin-top: 6px;
   color: var(--muted);
   font-weight: 700;
   font-size: 13px;
 }
 
-/* RESPONSIVE */
-@media (max-width: 1100px){
+/* THEMES */
+.kpi-blue::before{ background: var(--blue); }
+.kpi-green::before{ background: var(--green); }
+.kpi-amber::before{ background: var(--amber); }
+.kpi-red::before{ background: var(--red); }
+
+/* ================= CHART ================= */
+.chart-card{
+  border: var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.chart-title{
+  font-weight: 900;
+  color: #0b5a46;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.chart-wrap{
+  height: 320px;
+  width: 100%;
+}
+
+/* ================= FOOTER ================= */
+.footnote{
+  margin-top: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 900px){
   .filters{ grid-template-columns: 1fr; }
   .kpi-grid{ grid-template-columns: 1fr; }
-  .grid-2{ grid-template-columns: 1fr; }
-}
-@media (min-width: 1600px){
-  .container{ max-width: 1700px; }
-  .kpi-value{ font-size: 54px; }
-  .chart-wrap{ height: 420px; }
-  .title{ font-size: 26px; }
-}
-
-/* ===========================
-   ANALISIS MM - layout pro
-   (tabla + dona lado a lado)
-=========================== */
-
-.kpi-grid-3{
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.filters-mm{
-  grid-template-columns: 1.2fr 0.9fr 0.9fr;
-}
-
-.hint-right{
-  text-align:right;
-}
-
-.split-2{
-  display:grid;
-  grid-template-columns: 1.25fr 1fr;
-  gap: 14px;
-  align-items: stretch;
-}
-
-/* tabla con scroll si crece */
-.table-wrap{
-  width: 100%;
-  overflow:auto;
-  border-radius: 12px;
-  border: var(--border);
-}
-
-/* tabla “pro” */
-.table{
-  width:100%;
-  border-collapse: collapse;
-  min-width: 560px;
-  background:#fff;
-}
-.table thead th{
-  position: sticky;
-  top: 0;
-  background: #0b1220;
-  color:#fff;
-  text-transform: uppercase;
-  letter-spacing: .6px;
-  font-weight: 1000;
-  font-size: 12px;
-  padding: 10px 10px;
-}
-.table td{
-  padding: 9px 10px;
-  border-bottom: 1px solid rgba(2,8,20,.08);
-  font-weight: 800;
-}
-.table td.num, .table th.num{
-  text-align:right;
-}
-.table tfoot td{
-  background: rgba(2,8,20,.03);
-  font-weight: 1000;
-}
-
-/* alto del chart en MM */
-.chart-wrap-mm{
-  height: 360px;
-}
-
-/* responsive */
-@media (max-width: 1100px){
-  .kpi-grid-3{ grid-template-columns: 1fr; }
-  .filters-mm{ grid-template-columns: 1fr; }
-  .split-2{ grid-template-columns: 1fr; }
-  .table{ min-width: 0; }
-}
-
-/* ====== ANÁLISIS MM: layout pro y “lado a lado” ====== */
-
-.kpi-grid-3{
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.mm-filter-row{
-  display:grid;
-  grid-template-columns: 1.3fr 0.6fr 1fr;
-  gap: 14px;
-  align-items:end;
-}
-.mm-source{
-  display:flex;
-  justify-content:flex-end;
-  align-items:flex-end;
-}
-
-.mm-split{
-  display:grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 14px;
-  align-items:start;
-}
-
-.mm-card{
-  border: var(--border);
-  border-radius: 16px;
-  background:#fff;
-  box-shadow: 0 10px 24px rgba(2,8,20,.08);
-  padding: 12px;
-}
-.mm-card-title{
-  font-weight: 1000;
-  color: #0b5a46;
-  letter-spacing:.6px;
-  text-transform: uppercase;
-  margin: 4px 4px 10px;
-}
-
-.table-wrap{
-  width: 100%;
-  overflow:auto;
-  border-radius: 12px;
-  border: var(--border);
-}
-
-.tbl{
-  width:100%;
-  border-collapse: collapse;
-  font-weight: 800;
-  font-size: 13px;
-}
-.tbl thead th{
-  background: #0b1220;
-  color:#fff;
-  padding: 10px 10px;
-  text-align:left;
-  white-space:nowrap;
-}
-.tbl td{
-  padding: 9px 10px;
-  border-top: 1px solid rgba(2,8,20,.08);
-  white-space:nowrap;
-}
-.tbl td.num, .tbl th.num{ text-align:right; }
-.tbl .total-row td{
-  background: rgba(2,8,20,.04);
-  font-weight: 1000;
-}
-
-.muted{
-  color: var(--muted);
-  font-weight: 800;
-}
-
-.mm-donut-wrap{
-  height: 360px;
-}
-
-.mm-legend{
-  margin-top: 10px;
-  display:grid;
-  gap: 6px;
-}
-.legend-row{
-  display:flex;
-  align-items:center;
-  gap: 8px;
-  font-weight: 800;
-  color: var(--muted);
-  font-size: 13px;
-}
-.legend-dot{
-  width: 10px;
-  height: 10px;
-  border-radius: 99px;
-  background:#999;
-  display:inline-block;
-}
-
-@media (max-width: 1100px){
-  .mm-filter-row{ grid-template-columns: 1fr; }
-  .mm-split{ grid-template-columns: 1fr; }
-  .kpi-grid-3{ grid-template-columns: 1fr; }
-  .mm-source{ justify-content:flex-start; }
-  .mm-donut-wrap{ height: 320px; }
-}
-
-/* --- opcional: filtros en 4 columnas --- */
-.filters-4{
-  grid-template-columns: 1.1fr 0.9fr 0.7fr 0.7fr;
-}
-
-/* ==========================
-   KPIs más chicos + 2 filas
-   (pegalo AL FINAL del styles.css)
-========================== */
-
-/* 2 columnas en escritorio => 4 tarjetas = 2 filas */
-@media (min-width: 900px){
-  .kpi-grid,
-  .kpi-grid-4{
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px !important;
-  }
-}
-
-/* En pantallas muy grandes, si querés que siga 2x2, dejalo así.
-   Si quisieras volver a 4 columnas en TV, avisame. */
-
-/* Tarjeta más compacta */
-.kpi{
-  padding: 12px 12px 10px !important;
-  border-radius: 14px !important;
-}
-
-/* Número más chico (antes era enorme) */
-.kpi-value{
-  font-size: 34px !important;   /* probá 32-36 */
-  line-height: 1.05 !important;
-  margin-top: 6px !important;
-}
-
-/* Título un poquito más compacto */
-.kpi-title{
-  font-size: 12px !important;
-}
-
-/* Subtexto más chico */
-.kpi-sub{
-  font-size: 13px !important;
-  margin-top: 8px !important;
-}
-.kpi-sub-strong{
-  font-size: 14px !important;
-}
-
-/* Icono más chico */
-.kpi-icon{
-  width: 38px !important;
-  height: 38px !important;
-  border-radius: 10px !important;
-  font-size: 16px !important;
 }
 
 
