@@ -3,11 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Control de Compras - Construcción | Análisis MM</title>
+  <title>Control de Compras - Construcción · Análisis MM</title>
 
   <link rel="stylesheet" href="styles.css" />
 
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
 
 <body>
@@ -36,7 +38,7 @@
 
     <!-- FILTRO -->
     <section class="panel">
-      <div class="panel-body filters" style="grid-template-columns: 1.2fr 0.7fr 1fr;">
+      <div class="panel-body filters">
         <div class="filter">
           <label>CLIENTE (ALMACEN)</label>
           <select id="clienteSelect">
@@ -54,7 +56,7 @@
         <div class="filter">
           <label>&nbsp;</label>
           <div class="hint" style="text-align:right">
-            Fuente: <b id="fuenteArchivo">ANALISIS-MM.csv</b> (delimitador “;”)
+            Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”)
           </div>
         </div>
       </div>
@@ -64,14 +66,14 @@
     <section class="panel">
       <div class="panel-title">DISPONIBILIDAD</div>
 
-      <div class="panel-body kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="panel-body kpi-grid kpi-grid-4">
         <div class="kpi kpi-blue">
           <div class="kpi-head">
             <div class="kpi-title">CANT MATERIALES</div>
             <div class="kpi-icon">📦</div>
           </div>
           <div id="kpiMat" class="kpi-value">-</div>
-          <div class="kpi-sub">Materiales distintos</div>
+          <div class="kpi-sub kpi-sub-strong">Materiales distintos</div>
         </div>
 
         <div class="kpi kpi-green">
@@ -80,7 +82,7 @@
             <div class="kpi-icon">✅</div>
           </div>
           <div id="kpiDisp" class="kpi-value">-</div>
-          <div class="kpi-sub">Materiales con Libre utilización &gt; 0</div>
+          <div class="kpi-sub kpi-sub-strong">Libre utilización &gt; 0</div>
         </div>
 
         <div class="kpi kpi-amber">
@@ -89,7 +91,16 @@
             <div class="kpi-icon">📈</div>
           </div>
           <div id="kpiPct" class="kpi-value">-</div>
-          <div class="kpi-sub">Disponible / Materiales</div>
+          <div class="kpi-sub kpi-sub-strong">Disponible / Materiales</div>
+        </div>
+
+        <div class="kpi">
+          <div class="kpi-head">
+            <div class="kpi-title">INFO</div>
+            <div class="kpi-icon">ℹ️</div>
+          </div>
+          <div id="kpiInfo" class="kpi-value" style="font-size:22px">-</div>
+          <div class="kpi-sub">Columnas detectadas automáticamente</div>
         </div>
       </div>
     </section>
@@ -98,36 +109,10 @@
     <section class="panel">
       <div class="panel-title">ESTADOS</div>
 
-      <div class="panel-body" style="display:grid; grid-template-columns: 1.1fr 1fr; gap:14px;">
-        <div class="chart-card">
+      <div class="panel-body">
+        <div class="chart-card" style="margin-bottom:12px">
           <div class="chart-title">Tabla de estados</div>
-          <div style="overflow:auto;">
-            <table style="width:100%; border-collapse:collapse; font-weight:800;">
-              <thead>
-                <tr style="background:#0b1220; color:#fff;">
-                  <th style="text-align:left; padding:10px;">ESTADO</th>
-                  <th style="text-align:right; padding:10px;">CANT MATERIALES</th>
-                  <th style="text-align:right; padding:10px;">%TG CANT MATERIALES</th>
-                </tr>
-              </thead>
-              <tbody id="tablaEstadosBody"></tbody>
-            </table>
-          </div>
-          <div class="hint" style="margin-top:8px;">Cuenta materiales distintos por estado</div>
-        </div>
 
-        <div class="chart-card">
-          <div class="chart-title">Gráfico circular</div>
-          <div class="chart-wrap" style="height:420px;">
-            <canvas id="chartEstados"></canvas>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <script src="analisis-mm.js"></script>
-</body>
-</html>
+          <div style="overflow:auto">
 
 
