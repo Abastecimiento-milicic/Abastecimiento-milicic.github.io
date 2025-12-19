@@ -331,4 +331,80 @@ select:focus{
   .title{ font-size: 26px; }
 }
 
+/* ===========================
+   ANALISIS MM - layout pro
+   (tabla + dona lado a lado)
+=========================== */
+
+.kpi-grid-3{
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.filters-mm{
+  grid-template-columns: 1.2fr 0.9fr 0.9fr;
+}
+
+.hint-right{
+  text-align:right;
+}
+
+.split-2{
+  display:grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+/* tabla con scroll si crece */
+.table-wrap{
+  width: 100%;
+  overflow:auto;
+  border-radius: 12px;
+  border: var(--border);
+}
+
+/* tabla “pro” */
+.table{
+  width:100%;
+  border-collapse: collapse;
+  min-width: 560px;
+  background:#fff;
+}
+.table thead th{
+  position: sticky;
+  top: 0;
+  background: #0b1220;
+  color:#fff;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  font-weight: 1000;
+  font-size: 12px;
+  padding: 10px 10px;
+}
+.table td{
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(2,8,20,.08);
+  font-weight: 800;
+}
+.table td.num, .table th.num{
+  text-align:right;
+}
+.table tfoot td{
+  background: rgba(2,8,20,.03);
+  font-weight: 1000;
+}
+
+/* alto del chart en MM */
+.chart-wrap-mm{
+  height: 360px;
+}
+
+/* responsive */
+@media (max-width: 1100px){
+  .kpi-grid-3{ grid-template-columns: 1fr; }
+  .filters-mm{ grid-template-columns: 1fr; }
+  .split-2{ grid-template-columns: 1fr; }
+  .table{ min-width: 0; }
+}
+
 
