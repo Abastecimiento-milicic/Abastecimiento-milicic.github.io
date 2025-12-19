@@ -114,5 +114,38 @@
           <div class="chart-title">Tabla de estados</div>
 
           <div style="overflow:auto">
+            <table style="width:100%; border-collapse:collapse">
+              <thead>
+                <tr style="background:#0b1220; color:#fff">
+                  <th style="padding:10px; text-align:left">ESTADO</th>
+                  <th style="padding:10px; text-align:right">CANT MATERIALES</th>
+                  <th style="padding:10px; text-align:right">%TG CANT MATERIALES</th>
+                </tr>
+              </thead>
+              <tbody id="estadosBody"></tbody>
+              <tfoot>
+                <tr style="font-weight:900; background:#f3f6f8">
+                  <td style="padding:10px">Total</td>
+                  <td id="estadosTotal" style="padding:10px; text-align:right">-</td>
+                  <td style="padding:10px; text-align:right">100,00%</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
 
+        <div class="chart-card">
+          <div class="chart-title">Gráfico circular</div>
+          <div class="chart-wrap">
+            <canvas id="chartEstados"></canvas>
+          </div>
+          <div class="footnote">Cuenta materiales distintos por estado</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="analisis-mm.js"></script>
+</body>
+</html>
 
