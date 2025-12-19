@@ -516,4 +516,10 @@ select:focus{
   .mm-donut-wrap{ height: 320px; }
 }
 
+/* --- opcional: filtros en 4 columnas --- */
+.filters-4{
+  grid-template-columns: 1.1fr 0.9fr 0.7fr 0.7fr;
+}
+
+
 
