@@ -1,52 +1,44 @@
 /* ============================
-   ANALISIS MM - CONFIG
+   CONFIG
 ============================ */
-const CSV_CANDIDATES = [
-  "ANALISIS-MM.csv",
-  "ANALISIS-MM.CSV",
-  "ANALISIS-MM.csv?v=1"
-];
-
+const csvUrl = "ANALISIS-MM.csv";
 const DELIM = ";";
-
-// Columnas (según lo que venís usando)
-const COL_ALMACEN = "Almacén";              // filtro cliente
-const COL_MATERIAL = "Material";            // materiales distintos
-const COL_ESTADO = "Estado";                // tabla + donut
-const COL_LIBRE = "Libre utilizacion";      // disponible > 0
 
 /* ============================
    HELPERS
 ============================ */
 const clean = (v) => (v ?? "").toString().trim();
 
-function toNumber(v) {
-  let x = clean(v);
-  if (!x) return 0;
-  x = x.replace(/\s/g, "");
-  // soporte 1.234,56 y 1234,56 y 1234.56
-  if (x.includes(",")) x = x.replace(/\./g, "").replace(",", ".");
-  const n = Number(x);
-  return Number.isFinite(n) ? n : 0;
+function showError(msg) {
+  const el = document.getElementById("msg");
+  if (el) el.innerHTML = `<div class="error">${msg}</div>`;
 }
 
 function fmtInt(n) {
   return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
 }
 
-function fmtPct01(x) {
+function fmtPct(x) {
   if (!isFinite(x)) return "-";
   return (x * 100).toFixed(2).replace(".", ",") + "%";
 }
 
-function showError(html) {
-  const el = document.getElementById("msg");
-  if (el) el.innerHTML = `<div class="error">${html}</div>`;
+function toNumber(v) {
+  let x = clean(v);
+  if (!x) return 0;
+  x = x.replace(/\s/g, "");
+  // soporta 1.234,56 y 1234,56 y 1234.56
+  if (x.includes(",")) x = x.replace(/\./g, "").replace(",", ".");
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
 }
 
-function setText(id, txt) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = txt;
+// Normaliza: sin acentos, minúsculas, sin espacios/guiones/underscores
+function norm(s) {
+  return clean(s)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // saca acentos
+    .toLowerCase()
+    .replace(/[\s\-_]+/g, "");
 }
 
 /* ============================
@@ -92,37 +84,39 @@ function parseDelimited(text, delimiter = ";") {
 }
 
 /* ============================
-   FETCH con fallback (anti-caché)
-============================ */
-async function fetchFirstOk(urls) {
-  let lastErr = null;
-
-  for (const u of urls) {
-    try {
-      const resp = await fetch(u, { cache: "no-store" });
-      if (!resp.ok) {
-        lastErr = new Error(`HTTP ${resp.status} al abrir: ${u}`);
-        continue;
-      }
-      const text = await resp.text();
-      return { url: u, text };
-    } catch (e) {
-      lastErr = new Error(`No se pudo abrir: ${u} (${e.message})`);
-    }
-  }
-
-  throw lastErr || new Error("No se pudo abrir ningún CSV.");
-}
-
-/* ============================
    GLOBAL
 ============================ */
-let DATA = [];
-let HEADERS = [];
+let data = [];
+let headers = [];
+
+let COL_ALMACEN = null;
+let COL_MATERIAL = null;
+let COL_LIBRE = null;
+let COL_ESTADO = null;
+
 let chartEstados = null;
 
 /* ============================
-   UI: Select CLIENTE (ALMACEN)
+   COLUMN DETECTION (tolerante)
+============================ */
+function findColumn(headers, candidates) {
+  const map = new Map(headers.map(h => [norm(h), h]));
+  for (const c of candidates) {
+    const key = norm(c);
+    if (map.has(key)) return map.get(key);
+  }
+  // fallback: contains
+  for (const [k, orig] of map.entries()) {
+    for (const c of candidates) {
+      const ck = norm(c);
+      if (k.includes(ck) || ck.includes(k)) return orig;
+    }
+  }
+  return null;
+}
+
+/* ============================
+   UI: CLIENTES
 ============================ */
 function renderClientes() {
   const sel = document.getElementById("clienteSelect");
@@ -130,7 +124,7 @@ function renderClientes() {
 
   sel.querySelectorAll("option:not([value=''])").forEach(o => o.remove());
 
-  const clientes = [...new Set(DATA.map(r => clean(r[COL_ALMACEN])).filter(Boolean))]
+  const clientes = [...new Set(data.map(r => clean(r[COL_ALMACEN])).filter(Boolean))]
     .sort((a,b) => a.localeCompare(b, "es"));
 
   for (const c of clientes) {
@@ -141,118 +135,111 @@ function renderClientes() {
   }
 }
 
-function rowsFiltradas() {
+function filteredRows() {
   const c = document.getElementById("clienteSelect")?.value || "";
-  if (!c) return DATA;
-  return DATA.filter(r => clean(r[COL_ALMACEN]) === c);
+  return c ? data.filter(r => clean(r[COL_ALMACEN]) === c) : data;
 }
 
 /* ============================
-   KPI + Estados (por materiales distintos)
+   CALCS
 ============================ */
-function calcByEstado(rows) {
-  // Estado -> Set(material)
-  const map = new Map();
-
+function distinctCountBy(rows, col) {
+  const s = new Set();
   for (const r of rows) {
-    const estado = clean(r[COL_ESTADO]) || "(Sin estado)";
-    const mat = clean(r[COL_MATERIAL]) || "";
-    if (!mat) continue;
-
-    if (!map.has(estado)) map.set(estado, new Set());
-    map.get(estado).add(mat);
+    const v = clean(r[col]);
+    if (v) s.add(v);
   }
-
-  // a array ordenado desc por cantidad
-  const arr = [...map.entries()].map(([estado, setMat]) => ({
-    estado,
-    cant: setMat.size
-  })).sort((a,b) => b.cant - a.cant);
-
-  const total = arr.reduce((s,x)=> s + x.cant, 0);
-
-  // % sobre total
-  arr.forEach(x => x.pct = total ? (x.cant / total) : 0);
-
-  return { arr, total };
+  return s.size;
 }
 
-function calcKPIs(rows) {
-  const mats = new Set();
-  const matsDisponibles = new Set();
-
+function distinctAvailableMaterials(rows) {
+  const s = new Set();
   for (const r of rows) {
     const mat = clean(r[COL_MATERIAL]);
-    if (!mat) continue;
-
-    mats.add(mat);
-
     const libre = toNumber(r[COL_LIBRE]);
-    if (libre > 0) matsDisponibles.add(mat);
+    if (mat && libre > 0) s.add(mat);
   }
+  return s.size;
+}
 
-  const cantMateriales = mats.size;
-  const cantDisponibles = matsDisponibles.size;
-  const pctDisponible = cantMateriales ? (cantDisponibles / cantMateriales) : NaN;
-
-  return { cantMateriales, cantDisponibles, pctDisponible };
+function estadosAgg(rows) {
+  // estado -> Set(material)
+  const m = new Map();
+  for (const r of rows) {
+    const est = clean(r[COL_ESTADO]) || "(Sin estado)";
+    const mat = clean(r[COL_MATERIAL]);
+    if (!mat) continue;
+    if (!m.has(est)) m.set(est, new Set());
+    m.get(est).add(mat);
+  }
+  // a array
+  const out = [];
+  for (const [estado, setMat] of m.entries()) out.push({ estado, cant: setMat.size });
+  out.sort((a,b) => b.cant - a.cant || a.estado.localeCompare(b.estado, "es"));
+  return out;
 }
 
 /* ============================
-   Render tabla estados
+   RENDER
 ============================ */
-function renderTablaEstados(rows) {
-  const tbody = document.getElementById("tablaEstadosBody");
-  if (!tbody) return;
+function renderKPIs(rows) {
+  const totalMat = distinctCountBy(rows, COL_MATERIAL);
+  const dispMat = distinctAvailableMaterials(rows);
+  const pct = totalMat ? dispMat / totalMat : NaN;
 
-  const { arr, total } = calcByEstado(rows);
+  document.getElementById("kpiMat").textContent = fmtInt(totalMat);
+  document.getElementById("kpiDisp").textContent = fmtInt(dispMat);
+  document.getElementById("kpiPct").textContent = fmtPct(pct);
 
-  tbody.innerHTML = "";
+  const info = [
+    `Cliente: ${COL_ALMACEN}`,
+    `Material: ${COL_MATERIAL}`,
+    `Libre: ${COL_LIBRE}`,
+    `Estado: ${COL_ESTADO}`,
+  ].join(" · ");
+  document.getElementById("kpiInfo").textContent = info;
+}
 
-  for (const x of arr) {
+function renderEstadosTable(rows) {
+  const body = document.getElementById("estadosBody");
+  if (!body) return;
+  body.innerHTML = "";
+
+  const agg = estadosAgg(rows);
+  const total = agg.reduce((s,x)=> s + x.cant, 0);
+
+  document.getElementById("estadosTotal").textContent = fmtInt(total);
+
+  for (const it of agg) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${x.estado}</td>
-      <td style="text-align:right">${fmtInt(x.cant)}</td>
-      <td style="text-align:right">${fmtPct01(x.pct)}</td>
+      <td style="padding:8px; border-bottom:1px solid rgba(2,8,20,.08)">${it.estado}</td>
+      <td style="padding:8px; text-align:right; border-bottom:1px solid rgba(2,8,20,.08)">${fmtInt(it.cant)}</td>
+      <td style="padding:8px; text-align:right; border-bottom:1px solid rgba(2,8,20,.08)">${fmtPct(total ? it.cant/total : NaN)}</td>
     `;
-    tbody.appendChild(tr);
+    body.appendChild(tr);
   }
 
-  // total
-  const trTot = document.createElement("tr");
-  trTot.innerHTML = `
-    <td><b>Total</b></td>
-    <td style="text-align:right"><b>${fmtInt(total)}</b></td>
-    <td style="text-align:right"><b>100,00%</b></td>
-  `;
-  tbody.appendChild(trTot);
-
-  return { arr, total };
+  return agg;
 }
 
-/* ============================
-   Donut estados
-============================ */
-function buildDonutEstados(rows) {
-  const { arr } = calcByEstado(rows);
-
-  const labels = arr.map(x => x.estado);
-  const values = arr.map(x => x.cant);
-
+function renderDonut(agg) {
   const canvas = document.getElementById("chartEstados");
   if (!canvas) return;
 
   if (chartEstados) chartEstados.destroy();
 
+  const labels = agg.map(x => x.estado);
+  const values = agg.map(x => x.cant);
+  const total = values.reduce((a,b)=>a+b,0);
+
+  Chart.register(ChartDataLabels);
+
   chartEstados = new Chart(canvas.getContext("2d"), {
     type: "doughnut",
     data: {
       labels,
-      datasets: [{
-        data: values,
-        borderWidth: 1
-      }]
+      datasets: [{ data: values }]
     },
     options: {
       responsive: true,
@@ -262,100 +249,93 @@ function buildDonutEstados(rows) {
         tooltip: {
           callbacks: {
             label: (c) => {
-              const v = c.parsed ?? 0;
-              const total = values.reduce((s,x)=>s+x,0);
+              const v = c.parsed || 0;
               const pct = total ? (v/total)*100 : 0;
               return ` ${c.label}: ${fmtInt(v)} (${pct.toFixed(2).replace(".", ",")}%)`;
             }
           }
+        },
+        datalabels: {
+          formatter: (v) => {
+            if (!total) return "";
+            const pct = (v/total)*100;
+            return pct >= 7 ? `${pct.toFixed(0)}%` : ""; // no ensuciar si es chico
+          },
+          font: { weight: "900" }
         }
-      }
+      },
+      cutout: "62%"
     }
   });
 }
 
-/* ============================
-   Apply (todo)
-============================ */
 function applyAll() {
-  const rows = rowsFiltradas();
-
-  // KPIs
-  const k = calcKPIs(rows);
-  setText("kpiMat", fmtInt(k.cantMateriales));
-  setText("kpiDisp", fmtInt(k.cantDisponibles));
-  setText("kpiPct", fmtPct01(k.pctDisponible));
-
-  // Tabla + donut
-  renderTablaEstados(rows);
-  buildDonutEstados(rows);
+  const rows = filteredRows();
+  renderKPIs(rows);
+  const agg = renderEstadosTable(rows) || [];
+  renderDonut(agg);
 }
 
 /* ============================
    INIT
 ============================ */
-window.addEventListener("DOMContentLoaded", async () => {
-  // fecha header
+window.addEventListener("DOMContentLoaded", () => {
+  // fecha “hoy” en header
   const d = new Date();
-  const lastUpdate = document.getElementById("lastUpdate");
-  if (lastUpdate) {
-    lastUpdate.textContent =
-      `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
-  }
+  document.getElementById("lastUpdate").textContent =
+    `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 
-  try {
-    const { url, text } = await fetchFirstOk(CSV_CANDIDATES);
+  fetch(csvUrl)
+    .then(r => {
+      if (!r.ok) throw new Error(`No pude abrir ${csvUrl} (HTTP ${r.status})`);
+      return r.text();
+    })
+    .then(text => {
+      const m = parseDelimited(text, DELIM);
+      if (!m.length || m.length < 2) throw new Error("El CSV está vacío o no tiene filas.");
 
-    // fuente visible
-    const src = document.getElementById("fuenteArchivo");
-    if (src) src.textContent = url.replace(/\?.*$/, "");
+      headers = m[0].map(clean);
 
-    const m = parseDelimited(text, DELIM);
-    if (!m.length || m.length < 2) {
-      showError("El CSV está vacío o no tiene filas.");
-      return;
-    }
+      // Detecta columnas con tolerancia (acentos/mayúsculas)
+      COL_ALMACEN = findColumn(headers, ["ALMACEN", "ALMACÉN", "CLIENTE", "CLIENTE / OBRA"]);
+      COL_MATERIAL = findColumn(headers, ["MATERIAL", "CODIGO MATERIAL", "CODIGO_MATERIAL"]);
+      COL_LIBRE = findColumn(headers, ["LIBRE UTILIZACION", "LIBRE UTILIZACIÓN", "LIBREUTILIZACION", "LIBRE UTILIZ"]);
+      COL_ESTADO = findColumn(headers, ["ESTADO", "ID ESTADO", "Id Estado", "Estado"]);
 
-    HEADERS = m[0].map(clean);
+      const missing = [];
+      if (!COL_ALMACEN) missing.push("ALMACEN");
+      if (!COL_MATERIAL) missing.push("MATERIAL");
+      if (!COL_LIBRE) missing.push("LIBRE UTILIZACION");
+      if (!COL_ESTADO) missing.push("ESTADO");
 
-    // Validaciones fuertes (para que el error sea claro)
-    const required = [COL_ALMACEN, COL_MATERIAL, COL_ESTADO, COL_LIBRE];
-    const missing = required.filter(c => !HEADERS.includes(c));
-    if (missing.length) {
-      showError(
-        `Faltan columnas en <b>${url}</b>: <b>${missing.join(", ")}</b><br>` +
-        `Revisá encabezados (incluye mayúsculas/acentos).`
-      );
-      return;
-    }
+      if (missing.length) {
+        throw new Error(
+          `Faltan columnas en ${csvUrl}: ${missing.join(", ")}. ` +
+          `Revisá encabezados (mayúsculas/acentos).`
+        );
+      }
 
-    DATA = m.slice(1).map(row => {
-      const o = {};
-      HEADERS.forEach((h, i) => (o[h] = clean(row[i])));
-      return o;
-    });
+      data = m.slice(1).map(row => {
+        const o = {};
+        headers.forEach((h, i) => (o[h] = clean(row[i])));
+        return o;
+      });
 
-    // hints
-    setText("clienteHint", `Columna cliente: ${COL_ALMACEN}`);
+      document.getElementById("clienteHint").textContent = `Columna cliente: ${COL_ALMACEN}`;
 
-    renderClientes();
-    applyAll();
-
-    document.getElementById("clienteSelect")?.addEventListener("change", applyAll);
-    document.getElementById("btnReset")?.addEventListener("click", () => {
-      const sel = document.getElementById("clienteSelect");
-      if (sel) sel.value = "";
+      renderClientes();
       applyAll();
-    });
 
-  } catch (err) {
-    console.error(err);
-    showError(
-      `Error cargando <b>ANALISIS-MM</b>.<br>` +
-      `${clean(err.message)}<br><br>` +
-      `Probá abrir el CSV directo en el navegador:<br>` +
-      `<code>/ANALISIS-MM.csv</code>`
-    );
-  }
+      document.getElementById("clienteSelect")?.addEventListener("change", applyAll);
+      document.getElementById("btnReset")?.addEventListener("click", () => {
+        const sel = document.getElementById("clienteSelect");
+        if (sel) sel.value = "";
+        applyAll();
+      });
+    })
+    .catch(err => {
+      console.error(err);
+      showError(err.message);
+    });
 });
 
