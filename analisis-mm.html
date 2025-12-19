@@ -7,7 +7,6 @@
 
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
@@ -38,7 +37,7 @@
 
     <!-- FILTRO -->
     <section class="panel">
-      <div class="panel-body filters">
+      <div class="panel-body filters filters-mm">
         <div class="filter">
           <label>CLIENTE (ALMACEN)</label>
           <select id="clienteSelect">
@@ -55,9 +54,7 @@
 
         <div class="filter">
           <label>&nbsp;</label>
-          <div class="hint" style="text-align:right">
-            Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”)
-          </div>
+          <div class="hint hint-right"><b>Fuente:</b> ANALISIS-MM.csv (delimitador “;”)</div>
         </div>
       </div>
     </section>
@@ -65,8 +62,7 @@
     <!-- KPIs -->
     <section class="panel">
       <div class="panel-title">DISPONIBILIDAD</div>
-
-      <div class="panel-body kpi-grid kpi-grid-4">
+      <div class="panel-body kpi-grid kpi-grid-3">
         <div class="kpi kpi-blue">
           <div class="kpi-head">
             <div class="kpi-title">CANT MATERIALES</div>
@@ -93,59 +89,56 @@
           <div id="kpiPct" class="kpi-value">-</div>
           <div class="kpi-sub kpi-sub-strong">Disponible / Materiales</div>
         </div>
-
-        <div class="kpi">
-          <div class="kpi-head">
-            <div class="kpi-title">INFO</div>
-            <div class="kpi-icon">ℹ️</div>
-          </div>
-          <div id="kpiInfo" class="kpi-value" style="font-size:22px">-</div>
-          <div class="kpi-sub">Columnas detectadas automáticamente</div>
-        </div>
       </div>
     </section>
 
-    <!-- ESTADOS -->
+    <!-- ESTADOS (TABLA + DONA AL LADO) -->
     <section class="panel">
       <div class="panel-title">ESTADOS</div>
 
       <div class="panel-body">
-        <div class="chart-card" style="margin-bottom:12px">
-          <div class="chart-title">Tabla de estados</div>
-
-          <div style="overflow:auto">
-            <table style="width:100%; border-collapse:collapse">
-              <thead>
-                <tr style="background:#0b1220; color:#fff">
-                  <th style="padding:10px; text-align:left">ESTADO</th>
-                  <th style="padding:10px; text-align:right">CANT MATERIALES</th>
-                  <th style="padding:10px; text-align:right">%TG CANT MATERIALES</th>
-                </tr>
-              </thead>
-              <tbody id="estadosBody"></tbody>
-              <tfoot>
-                <tr style="font-weight:900; background:#f3f6f8">
-                  <td style="padding:10px">Total</td>
-                  <td id="estadosTotal" style="padding:10px; text-align:right">-</td>
-                  <td style="padding:10px; text-align:right">100,00%</td>
-                </tr>
-              </tfoot>
-            </table>
+        <div class="split-2">
+          <!-- IZQUIERDA: TABLA -->
+          <div class="chart-card">
+            <div class="chart-title">TABLA DE ESTADOS</div>
+            <div class="table-wrap">
+              <table class="table" id="tablaEstados">
+                <thead>
+                  <tr>
+                    <th>ESTADO</th>
+                    <th class="num">CANT MATERIALES</th>
+                    <th class="num">%TG CANT MATERIALES</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+                <tfoot>
+                  <tr>
+                    <td><b>Total</b></td>
+                    <td class="num" id="totalMat">-</td>
+                    <td class="num">100,00%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div class="hint">Cuenta materiales distintos por estado</div>
           </div>
-        </div>
 
-        <div class="chart-card">
-          <div class="chart-title">Gráfico circular</div>
-          <div class="chart-wrap">
-            <canvas id="chartEstados"></canvas>
+          <!-- DERECHA: DONA -->
+          <div class="chart-card">
+            <div class="chart-title">GRÁFICO CIRCULAR</div>
+            <div class="chart-wrap chart-wrap-mm">
+              <canvas id="chartEstados"></canvas>
+            </div>
           </div>
-          <div class="footnote">Cuenta materiales distintos por estado</div>
         </div>
       </div>
     </section>
+
+    <footer class="footnote">
+      Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”)
+    </footer>
   </main>
 
   <script src="analisis-mm.js"></script>
 </body>
 </html>
-
