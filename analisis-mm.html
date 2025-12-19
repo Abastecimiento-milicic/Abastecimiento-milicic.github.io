@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Control de Compras - Construcción · Análisis MM</title>
+  <title>Control de Compras - Análisis MM</title>
 
   <link rel="stylesheet" href="styles.css" />
 
@@ -37,7 +37,7 @@
 
     <!-- FILTRO -->
     <section class="panel">
-      <div class="panel-body filters filters-mm">
+      <div class="panel-body mm-filter-row">
         <div class="filter">
           <label>CLIENTE (ALMACEN)</label>
           <select id="clienteSelect">
@@ -52,9 +52,8 @@
           <div class="hint">Vuelve a “Todos”</div>
         </div>
 
-        <div class="filter">
-          <label>&nbsp;</label>
-          <div class="hint hint-right"><b>Fuente:</b> ANALISIS-MM.csv (delimitador “;”)</div>
+        <div class="filter mm-source">
+          <div class="hint"><b>Fuente:</b> <span id="mmSourceName">ANALISIS-MM.csv</span> (delimitador “;”)</div>
         </div>
       </div>
     </section>
@@ -62,6 +61,7 @@
     <!-- KPIs -->
     <section class="panel">
       <div class="panel-title">DISPONIBILIDAD</div>
+
       <div class="panel-body kpi-grid kpi-grid-3">
         <div class="kpi kpi-blue">
           <div class="kpi-head">
@@ -78,7 +78,7 @@
             <div class="kpi-icon">✅</div>
           </div>
           <div id="kpiDisp" class="kpi-value">-</div>
-          <div class="kpi-sub kpi-sub-strong">Libre utilización &gt; 0</div>
+          <div class="kpi-sub kpi-sub-strong">Materiales con Libre utilización &gt; 0</div>
         </div>
 
         <div class="kpi kpi-amber">
@@ -92,17 +92,18 @@
       </div>
     </section>
 
-    <!-- ESTADOS (TABLA + DONA AL LADO) -->
+    <!-- ESTADOS -->
     <section class="panel">
       <div class="panel-title">ESTADOS</div>
 
       <div class="panel-body">
-        <div class="split-2">
-          <!-- IZQUIERDA: TABLA -->
-          <div class="chart-card">
-            <div class="chart-title">TABLA DE ESTADOS</div>
+        <div class="mm-split">
+          <!-- TABLA -->
+          <div class="mm-card">
+            <div class="mm-card-title">TABLA DE ESTADOS</div>
+
             <div class="table-wrap">
-              <table class="table" id="tablaEstados">
+              <table class="tbl">
                 <thead>
                   <tr>
                     <th>ESTADO</th>
@@ -110,35 +111,35 @@
                     <th class="num">%TG CANT MATERIALES</th>
                   </tr>
                 </thead>
-                <tbody></tbody>
-                <tfoot>
-                  <tr>
-                    <td><b>Total</b></td>
-                    <td class="num" id="totalMat">-</td>
-                    <td class="num">100,00%</td>
-                  </tr>
-                </tfoot>
+                <tbody id="estadosTbody">
+                  <tr><td colspan="3" class="muted">Cargando…</td></tr>
+                </tbody>
               </table>
             </div>
+
             <div class="hint">Cuenta materiales distintos por estado</div>
           </div>
 
-          <!-- DERECHA: DONA -->
-          <div class="chart-card">
-            <div class="chart-title">GRÁFICO CIRCULAR</div>
-            <div class="chart-wrap chart-wrap-mm">
-              <canvas id="chartEstados"></canvas>
+          <!-- DONA -->
+          <div class="mm-card">
+            <div class="mm-card-title">GRÁFICO CIRCULAR</div>
+
+            <div class="chart-wrap mm-donut-wrap">
+              <canvas id="donutEstados"></canvas>
             </div>
+
+            <div class="mm-legend" id="donutLegend"></div>
           </div>
         </div>
       </div>
     </section>
 
     <footer class="footnote">
-      Fuente: <b>ANALISIS-MM.csv</b> (delimitador “;”)
+      Fuente: <b>ANALISIS-MM.csv</b> · Filtro: <b>ALMACEN</b> · Cálculo: materiales distintos (Material) y disponibles (Libre utilización &gt; 0).
     </footer>
   </main>
 
   <script src="analisis-mm.js"></script>
 </body>
 </html>
+
