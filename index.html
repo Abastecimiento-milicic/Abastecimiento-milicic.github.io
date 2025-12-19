@@ -12,7 +12,7 @@
 <body>
   <header class="topbar">
     <div class="topbar-left">
-      <div class="title">ABASTECIMIENTO 2024/2025</div>
+      <div class="title">Control de Compras - Construcción</div>
       <div class="subtitle">Análisis de Cumplimiento de Pedidos por Obra</div>
     </div>
 
@@ -35,13 +35,29 @@
 
     <!-- FILTROS -->
     <section class="panel">
-      <div class="panel-body filters">
+      <div class="panel-body filters filters-4">
         <div class="filter">
           <label>CLIENTE / OBRA</label>
           <select id="clienteSelect">
             <option value="">Todos</option>
           </select>
           <div id="clienteHint" class="hint">Columna cliente: -</div>
+        </div>
+
+        <div class="filter">
+          <label>CLASIFICACIÓN 2</label>
+          <select id="clasif2Select">
+            <option value="">Todos</option>
+          </select>
+          <div id="clasif2Hint" class="hint">Columna: -</div>
+        </div>
+
+        <div class="filter">
+          <label>GC OC</label>
+          <select id="gcocSelect">
+            <option value="">Todos</option>
+          </select>
+          <div id="gcocHint" class="hint">Columna: -</div>
         </div>
 
         <div class="filter">
@@ -159,7 +175,7 @@
       </div>
     </section>
 
-    <!-- TENDENCIA (ABAJO) -->
+    <!-- TENDENCIA -->
     <section class="panel">
       <div class="panel-title">TENDENCIA DE CUMPLIMIENTO</div>
       <div class="panel-body">
@@ -180,7 +196,6 @@
   <script src="app.js"></script>
 </body>
 </html>
-
 
 
 
