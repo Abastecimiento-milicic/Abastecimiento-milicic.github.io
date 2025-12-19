@@ -7,6 +7,10 @@ const DELIM = ";";
 const FECHA_COL = "FECHA ENTREGA ESPERADA";
 const CLIENT_CANDIDATES = ["CLIENTE / OBRA", "CLIENTE NRO.", "CLIENTE"];
 
+// NUEVOS FILTROS
+const CLASIF2_CANDIDATES = ["CLASIFICACION 2", "CLASIFICACIÓN 2", "CLASIFICACION2", "CLASIFICACION_2"];
+const GCOC_CANDIDATES = ["GC OC", "GC_OC", "GCOC"];
+
 const AT_COL = "ENTREGADOS AT";
 const FT_COL = "ENTREGADOS FT";
 const NO_COL = "NO ENTREGADOS";
@@ -29,7 +33,10 @@ const COLORS = {
 ============================ */
 let data = [];
 let headers = [];
+
 let CLIENT_COL = null;
+let CLASIF2_COL = null;
+let GCOC_COL = null;
 
 let chartMes = null;
 let chartTendencia = null;
@@ -38,6 +45,16 @@ let chartTendencia = null;
    HELPERS
 ============================ */
 const clean = (v) => (v ?? "").toString().trim();
+
+function setText(id, txt) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = txt ?? "";
+}
+
+function setHTML(id, html) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html ?? "";
+}
 
 function toNumber(v) {
   let x = clean(v);
@@ -63,13 +80,7 @@ function safeFilePart(s) {
 }
 
 function showError(msg) {
-  const el = document.getElementById("msg");
-  if (el) el.innerHTML = `<div class="error">${msg}</div>`;
-}
-
-function clearMsg() {
-  const el = document.getElementById("msg");
-  if (el) el.innerHTML = "";
+  setHTML("msg", `<div class="error">${msg}</div>`);
 }
 
 /* ============================
@@ -141,17 +152,63 @@ function parseDelimited(text, delimiter = ";") {
 }
 
 /* ============================
-   FILTERS
+   SELECT UTIL
 ============================ */
-function filteredRowsByCliente() {
-  const sel = document.getElementById("clienteSelect");
-  const c = sel ? sel.value : "";
-  return c ? data.filter(r => clean(r[CLIENT_COL]) === c) : data;
+function fillSelect(selectId, values, placeholder = "Todos") {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+
+  const prev = sel.value;
+
+  sel.innerHTML = "";
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = placeholder;
+  sel.appendChild(opt0);
+
+  for (const v of values) {
+    const o = document.createElement("option");
+    o.value = v;
+    o.textContent = v;
+    sel.appendChild(o);
+  }
+
+  // mantener selección si existe, sino “Todos”
+  sel.value = values.includes(prev) ? prev : "";
 }
 
-function filteredRowsByClienteYMes() {
-  const rows = filteredRowsByCliente();
-  const mes = document.getElementById("mesSelect")?.value || "";
+function uniqSorted(arr) {
+  return [...new Set(arr.map(clean).filter(Boolean))].sort((a,b) => a.localeCompare(b, "es"));
+}
+
+/* ============================
+   FILTERS (NUEVO: cliente + clasif2 + gcoc)
+============================ */
+function getSel(id) {
+  return document.getElementById(id)?.value || "";
+}
+
+function rowsByClienteBase() {
+  const c = getSel("clienteSelect");
+  if (!c) return data;
+  return data.filter(r => clean(r[CLIENT_COL]) === c);
+}
+
+function filteredRowsNoMes() {
+  let rows = rowsByClienteBase();
+
+  const c2 = getSel("clasif2Select");
+  if (c2 && CLASIF2_COL) rows = rows.filter(r => clean(r[CLASIF2_COL]) === c2);
+
+  const gc = getSel("gcocSelect");
+  if (gc && GCOC_COL) rows = rows.filter(r => clean(r[GCOC_COL]) === gc);
+
+  return rows;
+}
+
+function filteredRowsByAll() {
+  const rows = filteredRowsNoMes();
+  const mes = getSel("mesSelect");
   if (!mes) return rows;
   return rows.filter(r => getMonthKeyFromRow(r) === mes);
 }
@@ -160,20 +217,39 @@ function filteredRowsByClienteYMes() {
    SELECTS
 ============================ */
 function renderClientes() {
-  const sel = document.getElementById("clienteSelect");
-  if (!sel) return;
+  const clientes = uniqSorted(data.map(r => r[CLIENT_COL]));
+  fillSelect("clienteSelect", clientes, "Todos");
+}
 
-  sel.querySelectorAll("option:not([value=''])").forEach(o => o.remove());
-
-  const clientes = [...new Set(data.map(r => clean(r[CLIENT_COL])).filter(Boolean))]
-    .sort((a,b) => a.localeCompare(b, "es"));
-
-  for (const c of clientes) {
-    const o = document.createElement("option");
-    o.value = c;
-    o.textContent = c;
-    sel.appendChild(o);
+function renderClasif2(rowsBase) {
+  const hint = document.getElementById("clasif2Hint");
+  if (!CLASIF2_COL) {
+    if (hint) hint.textContent = "Columna: (no encontrada)";
+    // deshabilito el select para que no moleste
+    const sel = document.getElementById("clasif2Select");
+    if (sel) { sel.disabled = true; sel.innerHTML = `<option value="">Todos</option>`; }
+    return;
   }
+  if (hint) hint.textContent = `Columna: ${CLASIF2_COL}`;
+  const vals = uniqSorted(rowsBase.map(r => r[CLASIF2_COL]));
+  const sel = document.getElementById("clasif2Select");
+  if (sel) sel.disabled = false;
+  fillSelect("clasif2Select", vals, "Todos");
+}
+
+function renderGcoc(rowsBase) {
+  const hint = document.getElementById("gcocHint");
+  if (!GCOC_COL) {
+    if (hint) hint.textContent = "Columna: (no encontrada)";
+    const sel = document.getElementById("gcocSelect");
+    if (sel) { sel.disabled = true; sel.innerHTML = `<option value="">Todos</option>`; }
+    return;
+  }
+  if (hint) hint.textContent = `Columna: ${GCOC_COL}`;
+  const vals = uniqSorted(rowsBase.map(r => r[GCOC_COL]));
+  const sel = document.getElementById("gcocSelect");
+  if (sel) sel.disabled = false;
+  fillSelect("gcocSelect", vals, "Todos");
 }
 
 function buildMesSelect(rows) {
@@ -261,20 +337,20 @@ function updateKPIsGeneral(rows) {
   const pctFT = t.total ? t.ft / t.total : NaN;
   const pctNO = t.total ? t.no / t.total : NaN;
 
-  document.getElementById("kpiTotal").textContent = fmtInt(t.total);
+  setText("kpiTotal", fmtInt(t.total));
 
-  document.getElementById("kpiATpct").textContent = fmtPct01(pctAT);
-  document.getElementById("kpiATqty").textContent = `Cantidad: ${fmtInt(t.at)}`;
+  setText("kpiATpct", fmtPct01(pctAT));
+  setText("kpiATqty", `Cantidad: ${fmtInt(t.at)}`);
 
-  document.getElementById("kpiFTpct").textContent = fmtPct01(pctFT);
-  document.getElementById("kpiFTqty").textContent = `Cantidad: ${fmtInt(t.ft)}`;
+  setText("kpiFTpct", fmtPct01(pctFT));
+  setText("kpiFTqty", `Cantidad: ${fmtInt(t.ft)}`);
 
-  document.getElementById("kpiNOpct").textContent = fmtPct01(pctNO);
-  document.getElementById("kpiNOqty").textContent = `Cantidad: ${fmtInt(t.no)}`;
+  setText("kpiNOpct", fmtPct01(pctNO));
+  setText("kpiNOqty", `Cantidad: ${fmtInt(t.no)}`);
 }
 
 function updateKPIsMonthly(rows, months) {
-  const mes = document.getElementById("mesSelect")?.value || "";
+  const mes = getSel("mesSelect");
   if (!mes) return;
 
   const idx = months.indexOf(mes);
@@ -283,10 +359,10 @@ function updateKPIsMonthly(rows, months) {
   const cur = calcMonthTotals(rows, mes);
   const prev = prevMes ? calcMonthTotals(rows, prevMes) : null;
 
-  document.getElementById("kpiTotalMes").textContent = fmtInt(cur.total);
-  document.getElementById("kpiATmes").textContent = fmtPct01(cur.pctAT);
-  document.getElementById("kpiFTmes").textContent = fmtPct01(cur.pctFT);
-  document.getElementById("kpiNOmes").textContent = fmtPct01(cur.pctNO);
+  setText("kpiTotalMes", fmtInt(cur.total));
+  setText("kpiATmes", fmtPct01(cur.pctAT));
+  setText("kpiFTmes", fmtPct01(cur.pctFT));
+  setText("kpiNOmes", fmtPct01(cur.pctNO));
 
   const atSub = document.getElementById("kpiATmesSub");
   const ftSub = document.getElementById("kpiFTmesSub");
@@ -324,7 +400,7 @@ function updateKPIsMonthly(rows, months) {
 }
 
 /* ============================
-   CHART DEFAULTS (Power BI hover)
+   CHART DEFAULTS
 ============================ */
 function applyChartDefaults() {
   Chart.register(ChartDataLabels);
@@ -336,7 +412,6 @@ function applyChartDefaults() {
   Chart.defaults.interaction.mode = "index";
   Chart.defaults.interaction.intersect = false;
 
-  // Tooltip estilo “Power BI”
   Chart.defaults.plugins.tooltip.backgroundColor = "rgba(255,255,255,0.97)";
   Chart.defaults.plugins.tooltip.titleColor = COLORS.text;
   Chart.defaults.plugins.tooltip.bodyColor = COLORS.text;
@@ -434,7 +509,7 @@ function buildChartMes(rows) {
 }
 
 /* ============================
-   CHART 2: Trend lines (rectas + etiquetas %)
+   CHART 2: Trend lines
 ============================ */
 function buildChartTendencia(rows) {
   const agg = new Map();
@@ -480,36 +555,9 @@ function buildChartTendencia(rows) {
     data: {
       labels: months,
       datasets: [
-        {
-          label: "A Tiempo %",
-          data: pAT,
-          borderColor: COLORS.green,
-          backgroundColor: COLORS.green,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2
-        },
-        {
-          label: "Fuera Tiempo %",
-          data: pFT,
-          borderColor: COLORS.amber,
-          backgroundColor: COLORS.amber,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2
-        },
-        {
-          label: "No Entregados %",
-          data: pNO,
-          borderColor: COLORS.red,
-          backgroundColor: COLORS.red,
-          tension: 0,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBorderWidth: 2
-        }
+        { label: "A Tiempo %", data: pAT, borderColor: COLORS.green, backgroundColor: COLORS.green, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
+        { label: "Fuera Tiempo %", data: pFT, borderColor: COLORS.amber, backgroundColor: COLORS.amber, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 },
+        { label: "No Entregados %", data: pNO, borderColor: COLORS.red, backgroundColor: COLORS.red, tension: 0, pointRadius: 4, pointHoverRadius: 6, pointBorderWidth: 2 }
       ]
     },
     options: {
@@ -517,20 +565,11 @@ function buildChartTendencia(rows) {
       maintainAspectRatio: false,
       scales: {
         x: { grid: { color: "transparent" }, ticks: { color: COLORS.muted } },
-        y: {
-          beginAtZero: true,
-          max: 100,
-          grid: { color: COLORS.grid },
-          ticks: { color: COLORS.muted, callback: (v) => v + "%" }
-        }
+        y: { beginAtZero: true, max: 100, grid: { color: COLORS.grid }, ticks: { color: COLORS.muted, callback: (v) => v + "%" } }
       },
       plugins: {
         legend: { position: "bottom" },
-        tooltip: {
-          callbacks: {
-            label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%`
-          }
-        },
+        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1).replace(".", ",")}%` } },
         datalabels: {
           align: "top",
           anchor: "end",
@@ -576,12 +615,31 @@ function getNoEntregadosRows(rows) {
 }
 
 /* ============================
-   APPLY ALL
+   APPLY ALL (con filtros nuevos)
 ============================ */
 function applyAll() {
-  const rows = filteredRowsByCliente();
+  // 1) base por cliente (para refrescar opciones dependientes)
+  const baseCliente = rowsByClienteBase();
+
+  // 2) refresco clasif2 desde cliente
+  renderClasif2(baseCliente);
+
+  // 3) refresco gcoc desde cliente + clasif2 actual
+  const baseParaGc = (() => {
+    let r = baseCliente;
+    const c2 = getSel("clasif2Select");
+    if (c2 && CLASIF2_COL) r = r.filter(x => clean(x[CLASIF2_COL]) === c2);
+    return r;
+  })();
+  renderGcoc(baseParaGc);
+
+  // 4) filas finales (sin mes) para KPIs generales + charts + meses disponibles
+  const rows = filteredRowsNoMes();
+
+  // 5) meses disponibles en base a filtros (sin mes)
   const months = buildMesSelect(rows);
 
+  // 6) KPIs y charts con filtros aplicados
   updateKPIsGeneral(rows);
   updateKPIsMonthly(rows, months);
 
@@ -595,9 +653,9 @@ function applyAll() {
 window.addEventListener("DOMContentLoaded", () => {
   applyChartDefaults();
 
+  // fecha “hoy” en header
   const d = new Date();
-  document.getElementById("lastUpdate").textContent =
-    `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+  setText("lastUpdate", `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`);
 
   fetch(csvUrl)
     .then(r => {
@@ -619,6 +677,10 @@ window.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      // detectar columnas nuevas si existen
+      CLASIF2_COL = CLASIF2_CANDIDATES.find(c => headers.includes(c)) || null;
+      GCOC_COL = GCOC_CANDIDATES.find(c => headers.includes(c)) || null;
+
       const required = [FECHA_COL, AT_COL, FT_COL, NO_COL];
       const missing = required.filter(c => !headers.includes(c));
       if (missing.length) {
@@ -632,24 +694,40 @@ window.addEventListener("DOMContentLoaded", () => {
         return o;
       });
 
-      // ✅ si llegamos acá, está todo OK => limpiamos mensajes de error anteriores
-      clearMsg();
-
-      document.getElementById("clienteHint").textContent = `Columna cliente: ${CLIENT_COL}`;
+      setText("clienteHint", `Columna cliente: ${CLIENT_COL}`);
+      setText("clasif2Hint", CLASIF2_COL ? `Columna: ${CLASIF2_COL}` : "Columna: (no encontrada)");
+      setText("gcocHint", GCOC_COL ? `Columna: ${GCOC_COL}` : "Columna: (no encontrada)");
 
       renderClientes();
       applyAll();
 
-      document.getElementById("clienteSelect")?.addEventListener("change", applyAll);
+      // listeners
+      document.getElementById("clienteSelect")?.addEventListener("change", () => {
+        // al cambiar cliente, reseteo los otros filtros para evitar combinaciones raras
+        const c2 = document.getElementById("clasif2Select");
+        if (c2) c2.value = "";
+        const gc = document.getElementById("gcocSelect");
+        if (gc) gc.value = "";
+        applyAll();
+      });
+
+      document.getElementById("clasif2Select")?.addEventListener("change", () => {
+        // al cambiar clasif2, reseteo gcoc (depende del clasif2)
+        const gc = document.getElementById("gcocSelect");
+        if (gc) gc.value = "";
+        applyAll();
+      });
+
+      document.getElementById("gcocSelect")?.addEventListener("change", applyAll);
 
       document.getElementById("mesSelect")?.addEventListener("change", () => {
-        const rows = filteredRowsByCliente();
+        const rows = filteredRowsNoMes();
         const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))].sort();
         updateKPIsMonthly(rows, months);
       });
 
       document.getElementById("btnDownloadNO")?.addEventListener("click", () => {
-        const rowsFilt = filteredRowsByClienteYMes();
+        const rowsFilt = filteredRowsByAll();
         const noRows = getNoEntregadosRows(rowsFilt);
 
         if (!noRows.length) {
@@ -659,12 +737,17 @@ window.addEventListener("DOMContentLoaded", () => {
 
         const cols = [CLIENT_COL, FECHA_COL, AT_COL, FT_COL, NO_COL];
 
-        const cliente = safeFilePart(document.getElementById("clienteSelect")?.value || "Todos");
-        const mes = safeFilePart(document.getElementById("mesSelect")?.value || "Todos");
-        const filename = `NO_ENTREGADOS_${cliente}_${mes}.csv`;
+        const cliente = safeFilePart(getSel("clienteSelect") || "Todos");
+        const c2 = safeFilePart(getSel("clasif2Select") || "Todos");
+        const gc = safeFilePart(getSel("gcocSelect") || "Todos");
+        const mes = safeFilePart(getSel("mesSelect") || "Todos");
 
+        const filename = `NO_ENTREGADOS_${cliente}_${c2}_${gc}_${mes}.csv`;
         downloadCSV(filename, noRows, cols);
       });
+
+      // limpio mensaje de error si había
+      setHTML("msg", "");
     })
     .catch(err => {
       console.error(err);
