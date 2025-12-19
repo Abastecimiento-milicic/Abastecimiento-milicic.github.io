@@ -521,5 +521,59 @@ select:focus{
   grid-template-columns: 1.1fr 0.9fr 0.7fr 0.7fr;
 }
 
+/* ==========================
+   KPIs más chicos + 2 filas
+   (pegalo AL FINAL del styles.css)
+========================== */
+
+/* 2 columnas en escritorio => 4 tarjetas = 2 filas */
+@media (min-width: 900px){
+  .kpi-grid,
+  .kpi-grid-4{
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+}
+
+/* En pantallas muy grandes, si querés que siga 2x2, dejalo así.
+   Si quisieras volver a 4 columnas en TV, avisame. */
+
+/* Tarjeta más compacta */
+.kpi{
+  padding: 12px 12px 10px !important;
+  border-radius: 14px !important;
+}
+
+/* Número más chico (antes era enorme) */
+.kpi-value{
+  font-size: 34px !important;   /* probá 32-36 */
+  line-height: 1.05 !important;
+  margin-top: 6px !important;
+}
+
+/* Título un poquito más compacto */
+.kpi-title{
+  font-size: 12px !important;
+}
+
+/* Subtexto más chico */
+.kpi-sub{
+  font-size: 13px !important;
+  margin-top: 8px !important;
+}
+.kpi-sub-strong{
+  font-size: 14px !important;
+}
+
+/* Icono más chico */
+.kpi-icon{
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 10px !important;
+  font-size: 16px !important;
+}
+
+
+
 
 
