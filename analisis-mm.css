@@ -55,3 +55,33 @@
   font-size: 12px;
   font-weight: 700;
 }
+
+/* ===== Bordes Análisis MM ===== */
+
+/* Card que contiene tabla o gráfico */
+.page-mm .mm-card{
+  border: 2px solid #0b5d46;   /* verde similar al header */
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* Bordes para la tabla */
+.page-mm table{
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.page-mm table th,
+.page-mm table td{
+  border: 1px solid #d0d7de;
+  padding: 6px 8px;
+}
+
+/* Un poco más fuerte el header */
+.page-mm table thead th{
+  background: #f3f6f5;
+  border-bottom: 2px solid #0b5d46;
+}
+
