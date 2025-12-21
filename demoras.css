@@ -1,0 +1,58 @@
+/* ===== Demoras (demoras.html) ===== */
+
+@media (min-width: 900px){
+  .page-demoras .filters.filters-demoras{
+    grid-template-columns: 1.3fr 0.9fr;
+  }
+}
+
+@media (min-width: 1100px){
+  .page-demoras .kpi-grid.kpi-grid-3{
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ===== Tabla Demoras con bordes + heatmap ===== */
+.page-demoras #tablaAreas{
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* ayuda a que las columnas queden parejas */
+}
+
+.page-demoras #tablaAreas th,
+.page-demoras #tablaAreas td{
+  border: 1px solid rgba(2,8,20,.12);
+  padding: 8px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-demoras #tablaAreas thead th{
+  background: #f3f6f5;
+  border-bottom: 2px solid rgba(11,90,70,.35);
+  font-weight: 950;
+}
+
+/* columnas iguales */
+.page-demoras #tablaAreas thead th,
+.page-demoras #tablaAreas tbody td{
+  width: 1%;
+}
+
+/* si querés que el texto largo se vea (sacá ellipsis solo para la 1er col) */
+.page-demoras #tablaAreas th:first-child,
+.page-demoras #tablaAreas td:first-child{
+  white-space: normal;
+}
+
+/* hover */
+.page-demoras #tablaAreas tbody tr:hover td{
+  outline: 2px solid rgba(11,93,70,0.22);
+  outline-offset: -2px;
+}
+
+/* transiciones suaves para el heatmap (cuando JS setea background) */
+.page-demoras #tablaAreas td{
+  transition: background-color .18s ease, color .18s ease;
+}
