@@ -1,112 +1,96 @@
-/* ===== Análisis MM (analisis-mm.html) ===== */
+/* ===== Demoras (demoras.html) ===== */
 
-/* Fila de filtros MM */
-.page-mm .mm-filter-row{
-  display: grid;
-  gap: 14px;
-  align-items: end;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+/* Layout específico de filtros y KPIs (lo que ya venías usando) */
+@media (min-width: 900px){
+  .page-demoras .filters.filters-demoras{
+    grid-template-columns: 1.3fr 0.9fr;
+  }
 }
 
-/* KPIs: 3 columnas en desktop */
 @media (min-width: 1100px){
-  .page-mm .kpi-grid.kpi-grid-3{
+  .page-demoras .kpi-grid.kpi-grid-3{
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
-/* Layout MM: panel de estados + donut */
-.page-mm .mm-split{
-  display: grid;
-  gap: 14px;
-  grid-template-columns: 1fr;
-}
-@media (min-width: 1100px){
-  .page-mm .mm-split{
-    grid-template-columns: 420px 1fr;
-    align-items: start;
-  }
-}
-
-/* Cards MM */
-.page-mm .mm-card{
-  border: var(--border);
-  border-radius: 14px;
-  padding: 12px;
-  background: #fff;
-  box-shadow: var(--shadow-sm);
-}
-.page-mm .mm-card-title{
-  font-weight: 950;
-  margin-bottom: 10px;
-  color: #1c2a3a;
-  letter-spacing: .2px;
-}
-
-/* Tabla estados (refuerza base.css) */
-.page-mm .tbl thead th{
-  background: #f3f6f5;
-}
-.page-mm .tbl td,
-.page-mm .tbl th{
-  padding: 8px 10px;
-}
-.page-mm .tbl tbody tr:hover td{
-  background: rgba(11,90,70,.03);
-}
-
-/* Donut layout: canvas + leyenda (derecha en desktop) */
-.page-mm .donut-layout{
-  display: grid;
-  gap: 14px;
-  grid-template-columns: 1fr;
-  align-items: start;
-}
-@media (min-width: 1100px){
-  .page-mm .donut-layout{
-    grid-template-columns: 1fr 340px;
-  }
-}
-.page-mm .donut-canvas{
-  height: 360px; /* asegura espacio para el gráfico */
-}
-
-/* Leyenda custom */
-.page-mm .donut-legend{
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 360px;
-  overflow: auto;
-  padding-right: 6px;
-}
-.page-mm .donut-legend .legend-row{
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
-  line-height: 1.2;
-  padding: 8px 10px;
+/* =========================
+   TABLA + HEATMAP
+   - Columnas iguales
+   - Headers prolijos con ellipsis
+   - Bordes y hover suave
+========================= */
+.page-demoras #tablaAreas{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;              /* ✅ clave para columnas iguales */
+  overflow: hidden;
   border-radius: 12px;
-  border: var(--border);
-  background: rgba(2,8,20,.02);
-}
-.page-mm .donut-legend .legend-row:hover{
-  background: rgba(245,158,11,.10);
-  border-color: rgba(245,158,11,.35);
-}
-.page-mm .donut-legend .legend-dot{
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  display: inline-block;
-  margin-top: 3px;
-  flex: 0 0 auto;
+  border: 1px solid rgba(2,8,20,.12);
+  background: #fff;
+
+  /* ✅ número de columnas totales (incluye "Mes")
+     En tu captura son 7: Mes + 6 áreas.
+     Si agregás/sacás áreas, cambiá este valor. */
+  --cols: 7;
 }
 
-/* Fuente */
-.page-mm .mm-source{
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
+/* Reparto igualitario del ancho */
+.page-demoras #tablaAreas th,
+.page-demoras #tablaAreas td{
+  width: calc(100% / var(--cols));
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(2,8,20,.10);
+  border-right: 1px solid rgba(2,8,20,.08);
+  vertical-align: middle;
 }
+
+.page-demoras #tablaAreas tr > *:last-child{
+  border-right: none;
+}
+
+.page-demoras #tablaAreas thead th{
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f4f7f6;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: #0b1220;
+
+  /* ✅ encabezados largos: no rompen el layout */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Primera columna (Mes) */
+.page-demoras #tablaAreas tbody td:first-child{
+  font-weight: 700;
+  background: #ffffff;
+}
+
+/* Celdas numéricas (las pinta el JS con background-color) */
+.page-demoras #tablaAreas td.td-num{
+  transition: background-color .18s ease, color .18s ease;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hover suave de fila (sin pisar el color del heatmap) */
+.page-demoras #tablaAreas tbody tr:hover td{
+  outline: 1px solid rgba(8, 80, 60, .22);
+  outline-offset: -1px;
+}
+
+/* Opcional: bordes redondeados en esquinas */
+.page-demoras #tablaAreas thead tr th:first-child{ border-top-left-radius: 12px; }
+.page-demoras #tablaAreas thead tr th:last-child{ border-top-right-radius: 12px; }
+
+/* En pantallas chicas: achicamos padding para que entre todo */
+@media (max-width: 900px){
+  .page-demoras #tablaAreas th,
+  .page-demoras #tablaAreas td{
+    padding: 10px 10px;
+  }
+}
+
