@@ -34,3 +34,19 @@
 .page-demoras #tablaAreas tbody tr:hover td{
   outline: 2px solid rgba(11,93,70,0.25);
 }
+
+/* ===== Tabla Demoras: columnas mismo ancho ===== */
+.page-demoras #tablaAreas{
+  width: 100%;
+  table-layout: fixed;   /* fuerza a que todas las columnas se repartan igual */
+}
+
+.page-demoras #tablaAreas th,
+.page-demoras #tablaAreas td{
+  width: auto;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
