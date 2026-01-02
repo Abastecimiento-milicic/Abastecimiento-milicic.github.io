@@ -24,7 +24,7 @@
       <nav class="nav">
         <a class="nav-link" href="index.html">CUMPLIMIENTO</a>
         <a class="nav-link active" href="demoras.html">DEMORAS</a>
-        <a class="nav-link" href="analisis.html">ANALISIS MM</a>
+        <a class="nav-link" href="analisis-mm.html">ANALISIS MM</a>
       </nav>
     </div>
   </header>
@@ -34,15 +34,12 @@
       <div class="panel-title">GRÁFICOS</div>
 
       <div class="panel-body">
-
         <div class="card">
           <div class="card-title">Cantidad de demoras por mes</div>
           <div class="card-body">
-            <!-- ✅ Antes era: <canvas id="chartMes"></canvas> -->
             <div id="chartMes" style="width:100%;height:420px;"></div>
           </div>
         </div>
-
       </div>
     </section>
 
@@ -111,14 +108,13 @@
   </main>
 
   <!-- Libs -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+  <!-- ✅ FALTABA ESTO (si no, Papa.parse rompe y no carga nada) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <!-- App -->
   <script src="demoras.js"></script>
 </body>
 </html>
-
-
 
