@@ -14,6 +14,7 @@
 </head>
 
 <body class="page-demoras">
+
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
@@ -30,19 +31,22 @@
   </header>
 
   <main class="main">
+
+    <!-- GRÁFICOS -->
     <section class="panel">
       <div class="panel-title">GRÁFICOS</div>
-
       <div class="panel-body">
-        <div class="card">
-          <div class="card-title">Cantidad de demoras por mes</div>
-          <div class="card-body">
-            <div id="chartMes" style="width:100%;height:420px;"></div>
+        <div class="chart-card" style="width:100%;">
+          <div class="chart-title">Cantidad de demoras por mes</div>
+          <div class="chart-wrap">
+            <!-- ✅ Se mantiene canvas (Chart.js) -->
+            <canvas id="chartMes"></canvas>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- DEMORAS X AREA -->
     <section class="panel">
       <div class="panel-title">DEMORAS X AREA SEGUN MES SELECCIONADO</div>
 
@@ -51,56 +55,65 @@
           <div class="filter">
             <label>Cliente</label>
             <select id="clienteSelect"></select>
+            <div class="hint" id="clienteHint">Columna cliente: -</div>
           </div>
 
           <div class="filter">
             <label>Mes</label>
             <select id="mesSelect"></select>
-            <div id="mesHint" class="hint"></div>
+            <div class="hint" id="mesHint">Mes seleccionado: -</div>
           </div>
         </div>
 
         <div class="kpi-grid kpi-grid-3">
           <div class="kpi kpi-strong">
-            <div class="kpi-label">Demoras (mes)</div>
+            <div class="kpi-label">DEMORAS (MES)</div>
             <div class="kpi-value" id="kpiDemorasMes">-</div>
+            <div class="kpi-sub">Cantidad de pedidos con demora</div>
           </div>
 
           <div class="kpi kpi-strong">
-            <div class="kpi-label">Área principal</div>
+            <div class="kpi-label">ÁREA TOP (MES)</div>
             <div class="kpi-value" id="kpiTopArea">-</div>
             <div class="kpi-sub" id="kpiTopAreaSub">-</div>
           </div>
 
           <div class="kpi kpi-strong">
-            <div class="kpi-label">% principal</div>
+            <div class="kpi-label">% TOP ÁREA</div>
             <div class="kpi-value" id="kpiTopPct">-</div>
+            <div class="kpi-sub">Sobre demoras del mes</div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-title">% de demoras por ÁREA (mes seleccionado)</div>
-          <div class="card-body">
-            <div class="chart-row">
-              <div class="chart-left">
-                <div id="chartAreas" style="width:100%;height:360px;"></div>
-              </div>
-              <div class="chart-right">
-                <div class="table-wrap">
-                  <table class="tbl" id="tablaMotivos"></table>
-                </div>
-              </div>
+        <div class="grid-2">
+          <div class="chart-card">
+            <div class="chart-title">% de demoras por ÁREA (mes seleccionado)</div>
+            <div class="chart-wrap" style="height:380px;">
+              <div id="chartAreas" style="width:100%;height:100%;"></div>
             </div>
+          </div>
 
-            <div class="card-sep"></div>
-
-            <div class="card-title">Motivos (mes seleccionado)</div>
-            <div id="chartMotivos" style="width:100%;height:340px;"></div>
-
-            <div class="last-update" id="lastUpdate"></div>
+          <div class="chart-card">
+            <div class="chart-title">Motivos (mes seleccionado)</div>
+            <div class="chart-wrap" style="height:380px;">
+              <div id="chartMotivos" style="width:100%;height:100%;"></div>
+            </div>
           </div>
         </div>
 
+        <div class="chart-card">
+          <div class="chart-title">TABLA: DEMORAS POR MES Y ÁREA</div>
+          <div class="table-wrap">
+            <table class="tbl" id="tablaDemoras"></table>
+          </div>
+          <div class="hint" id="fuenteHint">
+            Fuente: DEMORAS.csv (delimitador “;”). Columnas de áreas: detectadas automáticamente.
+          </div>
+        </div>
+
+        <div class="last-update">
+          Última actualización <span id="lastUpdate">--/--/----</span>
+        </div>
       </div>
     </section>
 
@@ -108,10 +121,9 @@
   </main>
 
   <!-- Libs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-
-  <!-- ✅ FALTABA ESTO (si no, Papa.parse rompe y no carga nada) -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <!-- App -->
   <script src="demoras.js"></script>
