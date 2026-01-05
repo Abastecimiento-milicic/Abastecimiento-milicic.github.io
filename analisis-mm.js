@@ -508,7 +508,7 @@ buildDonut(e.items, e.total);
 ============================ */
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnDLBaseMM")?.addEventListener("click", () => downloadStaticFile("BASE_MM.csv"));
-    document.getElementById("btnDLStoNuloPP")?.addEventListener("click", () => downloadStaticFile("STO NULO - STO MENOR PP.csv"));
+    document.getElementById("btnDLStoNuloPP")?.addEventListener("click", () => downloadStaticFile("STO NULO.csv"));
 // Delegación de eventos: asegura que los botones funcionen siempre
   document.addEventListener("click", (ev) => {
     const t = ev.target.closest && ev.target.closest("button");
