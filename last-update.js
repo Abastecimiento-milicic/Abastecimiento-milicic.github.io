@@ -1,3 +1,3 @@
 // Editá SOLO este archivo para cambiar la fecha mostrada en el header.
 // Formato sugerido: dd/mm/aaaa
-window.LAST_UPDATE = "05/01/2026";
+window.LAST_UPDATE = "08/01/2026";
