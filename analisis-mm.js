@@ -239,41 +239,43 @@ function renderClientes() {
    CALCS
 ============================ */
 function calcKPIs(rows) {
-  const allMaterials = new Set();
-  const availableMaterials = new Set();
+  let totalPosiciones = 0;
+  let disponibles = 0;
 
   for (const r of rows) {
     const mat = clean(r[COL_MATERIAL]);
     if (!mat) continue;
-    allMaterials.add(mat);
+    
+    // Sumamos 1 por cada fila (Material + Almacén)
+    totalPosiciones++; 
 
     const libre = toNumber(r[COL_LIBRE]);
-    if (libre > 0) availableMaterials.add(mat);
+    if (libre > 0) disponibles++;
   }
 
-  const totalMat = allMaterials.size;
-  const dispMat = availableMaterials.size;
-  const pct = totalMat ? dispMat / totalMat : NaN;
+  const pct = totalPosiciones ? disponibles / totalPosiciones : NaN;
 
-  return { totalMat, dispMat, pct };
+  return { 
+    totalMat: totalPosiciones, 
+    dispMat: disponibles, 
+    pct 
+  };
 }
-
 function calcEstados(rows) {
-  // Estado -> Set(material)
-  const map = new Map();
+  const map = new Map(); // Estado -> Cantidad de posiciones
 
   for (const r of rows) {
     const estado = clean(r[COL_ESTADO]) || "(Sin estado)";
     const mat = clean(r[COL_MATERIAL]);
     if (!mat) continue;
 
-    if (!map.has(estado)) map.set(estado, new Set());
-    map.get(estado).add(mat);
+    // Incrementamos el contador para este estado sin importar si el material se repite
+    map.set(estado, (map.get(estado) || 0) + 1);
   }
 
-  const items = [...map.entries()].map(([estado, setMat]) => ({
+  const items = [...map.entries()].map(([estado, qty]) => ({
     estado,
-    qty: setMat.size
+    qty: qty // Aquí qty representa el número de filas/almacenes
   }));
 
   items.sort((a, b) => b.qty - a.qty);
@@ -282,7 +284,6 @@ function calcEstados(rows) {
 
   return { items, total };
 }
-
 /* ============================
    RENDER: TABLA + DONA
 ============================ */
