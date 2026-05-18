@@ -37,3 +37,15 @@
 .page-cumplimiento .kpi.kpi-slate {
   border-left: 4px solid #64748b;
 }
+
+
+/* =======================================================
+   Ajuste de alturas para dar más aire vertical a las etiquetas
+========================================================== */
+#chartMes {
+  height: 380px !important;  /* Le da los 80px extra que le faltaban para que no se corten las demoras */
+}
+
+#chartTendencia {
+  height: 260px !important;  /* Lo achicamos un toque para balancear el espacio en la pantalla */
+}
