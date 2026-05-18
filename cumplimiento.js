@@ -368,7 +368,7 @@ function rowsByClienteBase() {
 function filteredRowsNoMes() {
   let rows = rowsByClienteBase();
 
-  const c2s = getCheckedClasif2();
+  const c2s = getSelValues("clasif2Select");
   if (c2s.length && CLASIF2_COL) rows = rows.filter(r => c2s.includes(clean(r[CLASIF2_COL])));
   const gcs = getSelValues("gcocSelect");
   if (gcs.length && GCOC_COL) rows = rows.filter(r => gcs.includes(clean(r[GCOC_COL])));
@@ -391,83 +391,22 @@ function renderClientes() {
 }
 
 function renderClasif2(rowsBase) {
-  const container = document.getElementById("clasif2List");
-  if (!container) return;
-
   const hint = document.getElementById("clasif2Hint");
   if (!CLASIF2_COL) {
     if (hint) hint.textContent = "Columna: (no encontrada)";
-    container.innerHTML = "";
+    // deshabilito el select para que no moleste
+    const sel = document.getElementById("clasif2Select");
+    if (sel) { sel.disabled = true; sel.innerHTML = `<option value="">Todos</option>`; }
     return;
   }
   if (hint) hint.textContent = `Columna: ${CLASIF2_COL}`;
 
-  const vals = uniqSorted(rowsBase.map(r => clean(r[CLASIF2_COL])));
+  // Las opciones ya no incluirán EQUIPOS MENORES porque fueron reclasificados a ALMACEN
+  const vals = uniqSorted(rowsBase.map(r => r[CLASIF2_COL]));
 
-  // Capture previous state
-  const prevChecked = new Set(
-    [...container.querySelectorAll("input[type='checkbox']:not(.check-all-cb):checked")]
-      .map(cb => cb.value)
-  );
-  const allWasChecked = (() => {
-    const allCb = container.querySelector(".check-all-cb");
-    return !allCb || allCb.checked;
-  })();
-
-  container.innerHTML = "";
-
-  // "Todos" checkbox
-  const allLabel = document.createElement("label");
-  allLabel.className = "check-all";
-  const allCb = document.createElement("input");
-  allCb.type = "checkbox";
-  allCb.className = "check-all-cb";
-  allCb.checked = prevChecked.size === 0 && allWasChecked;
-  allLabel.appendChild(allCb);
-  allLabel.appendChild(document.createTextNode(" Todos"));
-  container.appendChild(allLabel);
-
-  for (const v of vals) {
-    const lbl = document.createElement("label");
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.value = v;
-    cb.checked = (prevChecked.size === 0 && allWasChecked) || prevChecked.has(v);
-    lbl.appendChild(cb);
-    lbl.appendChild(document.createTextNode(" " + v));
-    container.appendChild(lbl);
-  }
-
-  // Logic
-  allCb.addEventListener("change", () => {
-    const itemCbs = [...container.querySelectorAll("input[type='checkbox']:not(.check-all-cb)")];
-    itemCbs.forEach(c => c.checked = allCb.checked);
-
-    // al cambiar clasif2, reseteo gcoc (depende del clasif2)
-    const gc = document.getElementById("gcocSelect");
-    if (gc) { gc.selectedIndex = 0; enforceAllOption(gc); }
-    applyAll();
-  });
-
-  container.querySelectorAll("input[type='checkbox']:not(.check-all-cb)").forEach(cb => {
-    cb.addEventListener("change", () => {
-      const items = [...container.querySelectorAll("input[type='checkbox']:not(.check-all-cb)")];
-      allCb.checked = items.every(c => c.checked);
-
-      // al cambiar clasif2, reseteo gcoc (depende del clasif2)
-      const gc = document.getElementById("gcocSelect");
-      if (gc) { gc.selectedIndex = 0; enforceAllOption(gc); }
-      applyAll();
-    });
-  });
-}
-
-function getCheckedClasif2() {
-  const container = document.getElementById("clasif2List");
-  if (!container) return [];
-  const allCb = container.querySelector(".check-all-cb");
-  if (allCb && allCb.checked) return [];
-  return [...container.querySelectorAll("input[type='checkbox']:not(.check-all-cb):checked")].map(cb => cb.value);
+  const sel = document.getElementById("clasif2Select");
+  if (sel) sel.disabled = false;
+  fillSelect("clasif2Select", vals, "Todos");
 }
 
 function renderGcoc(rowsBase) {
@@ -735,13 +674,12 @@ function buildChartMes(rows) {
     const mk = monthKey(d);
     monthsSet.add(mk);
 
-    if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0, comp: 0, demSum: 0, demCnt: 0 });
+    if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0, demSum: 0, demCnt: 0 });
     const c = agg.get(mk);
 
     c.at += toNumber(r[AT_COL]);
     c.ft += toNumber(r[FT_COL]);
     c.no += toNumber(r[NO_COL]);
-    c.comp += toNumber(r["COMPROMETIDOS"]) || (toNumber(r[AT_COL]) + toNumber(r[FT_COL]) + toNumber(r[NO_COL]));
 
     const dem = toNumAny(r[DEMORA_COL]);
     if (!isNaN(dem)) { c.demSum += dem; c.demCnt += 1; }
@@ -761,67 +699,10 @@ function buildChartMes(rows) {
     return (c && c.demCnt) ? (c.demSum / c.demCnt) : null;
   });
 
-  // Cálculo del %AT Acumulado Histórico
-  const pAT_acum = [];
-  let sumaEntregadosATAcum = 0;
-  let sumaComprometidosAcum = 0;
-
-  for (let i = 0; i < months.length; i++) {
-    const c = agg.get(months[i]);
-    sumaEntregadosATAcum += (c?.at ?? 0);
-    sumaComprometidosAcum += (c?.comp ?? 0);
-    const pctAcum = sumaComprometidosAcum ? (sumaEntregadosATAcum / sumaComprometidosAcum) * 100 : 0;
-    pAT_acum.push(pctAcum);
-  }
-
   const el = document.getElementById("chartMes");
   if (!el || !window.echarts) return;
 
   if (!chartMes) chartMes = echarts.init(el, null, { renderer: "canvas" });
-
-  // =====================================================================
-  // --- ARMADO DE LÍNEA CON CONEXIÓN VERTICAL Y UN SOLO CARTEL FINAL ---
-  // =====================================================================
-  const lineSegments = [];
-
-  for (let i = 0; i < months.length; i++) {
-    const anoActual = parseInt(months[i].substring(0, 4), 10);
-    const hActual = (anoActual >= 2026) ? 78 : 75;
-
-    // 1. TRAMO HORIZONTAL DEL MES: Camina recto de principio a fin de la barra actual
-    const isLastMonth = (i === months.length - 1);
-    lineSegments.push([
-      { xAxis: i, yAxis: hActual, label: { show: false } },
-      { 
-        xAxis: i + 1, 
-        yAxis: hActual, 
-        label: isLastMonth ? {
-          show: true,
-          formatter: `Obj ${hActual}%`,
-          fontWeight: 800,
-          fontSize: 11,
-          position: "end",
-          backgroundColor: '#374151',
-          color: '#fff',
-          padding: [4, 6],
-          borderRadius: 4
-        } : { show: false }
-      }
-    ]);
-
-    // 2. CONEXIÓN VERTICAL PERFECTA: Si el mes siguiente cambia de año, tiramos el hilo hacia arriba
-    if (i < months.length - 1) {
-      const anoSig = parseInt(months[i + 1].substring(0, 4), 10);
-      const hSig = (anoSig >= 2026) ? 78 : 75;
-
-      if (hActual !== hSig) {
-        lineSegments.push([
-          { xAxis: i + 1, yAxis: hActual, label: { show: false } },
-          { xAxis: i + 1, yAxis: hSig, label: { show: false } }
-        ]);
-      }
-    }
-  }
 
   const option = {
     grid: { left: 56, right: 70, top: 40, bottom: 62 },
@@ -836,13 +717,11 @@ function buildChartMes(rows) {
         const at = byName["Entregados AT"];
         const ft = byName["Entregados FT"];
         const ne = byName["No entregados"];
-        const acum = byName["%AT Acumulado"];
         const dem = byName["Promedio días de demora"];
 
         if (at) html += `🟩 AT: <b>${fmtInt(qAT[at.dataIndex])}</b> (${_fmtNum1(at.value)}%)<br/>`;
         if (ft) html += `🟧 FT: <b>${fmtInt(qFT[ft.dataIndex])}</b> (${_fmtNum1(ft.value)}%)<br/>`;
         if (ne) html += `🟥 NE: <b>${fmtInt(qNO[ne.dataIndex])}</b> (${_fmtNum1(ne.value)}%)<br/>`;
-        if (acum) html += `🟪 %AT Acumulado: <b>${_fmtNum1(acum.value)}%</b><br/>`;
         if (dem && dem.value != null) html += `🔵 Demora prom.: <b>${Math.round(dem.value)}</b> días<br/>`;
         return html;
       }
@@ -882,13 +761,14 @@ function buildChartMes(rows) {
         name: "Entregados AT",
         type: "bar",
         stack: "pct",
+        // ✅ Si el valor es < 78%, agregamos borde rojo (estilo de alerta)
         data: pAT.map(v => {
           const val = +(+v).toFixed(4);
           if (val < 78) {
             return {
               value: val,
               itemStyle: {
-                borderColor: '#dc2626',
+                borderColor: '#dc2626', // Rojo sólido oscuro (contrastante)
                 borderWidth: 2,
                 borderType: 'solid',
                 borderRadius: [6, 6, 0, 0]
@@ -910,17 +790,21 @@ function buildChartMes(rows) {
             const pct = +p.value || 0;
             const q = (qAT)[i] || 0;
             if (!q) return "";
-            if (pct < 6) return "";
+            if (pct < 6) return ""; // no mostramos etiquetas si es muy chico
             const pctRound = Math.round(pct);
-            if (pct < 78) return `{warn|${fmtInt(q)}\n⚠ (${pctRound}%)}`;
+
+            // Si es menor a 78%, usamos estilo de alerta (ico peligro + rojo)
+            if (pct < 78) {
+              return `{warn|${fmtInt(q)}\n⚠ (${pctRound}%)}`;
+            }
             return `${fmtInt(q)}\n(${pctRound}%)`;
           },
           rich: {
             warn: {
               fontWeight: 950,
-              color: "#7f1d1d",
-              backgroundColor: "rgba(254, 202, 202, 0.9)",
-              borderColor: "#b91c1c",
+              color: "#7f1d1d", // rojo oscuro texto
+              backgroundColor: "rgba(254, 202, 202, 0.9)", // rojo claro fondo (casi opaco para tapar barra)
+              borderColor: "#b91c1c", // borde rojo fuerte
               borderWidth: 1.5,
               borderRadius: 4,
               padding: [2, 4],
@@ -935,7 +819,26 @@ function buildChartMes(rows) {
           padding: [2, 4]
         },
         labelLayout: { hideOverlap: true },
+
         emphasis: { disabled: true },
+        markLine: {
+          silent: true,
+          symbol: ["none", "none"],
+          label: {
+            show: true,
+            formatter: "Obj 78%",
+            fontWeight: 800,
+            fontSize: 11,
+            position: "end",
+            backgroundColor: '#374151',
+            color: '#fff',
+            padding: [4, 6],
+            borderRadius: 4
+          },
+          lineStyle: { type: "dashed", width: 2, color: "#374151" }, // Gris oscuro fuerte
+          data: [{ yAxis: 78 }]
+        },
+
         z: 1,
         zlevel: 0
       },
@@ -963,6 +866,7 @@ function buildChartMes(rows) {
           }
         },
         labelLayout: { hideOverlap: true },
+
         emphasis: { disabled: true },
         z: 1,
         zlevel: 0
@@ -991,62 +895,10 @@ function buildChartMes(rows) {
           }
         },
         labelLayout: { hideOverlap: true },
+
         emphasis: { disabled: true },
         z: 1,
         zlevel: 0
-      },
-      {
-        name: "%AT Acumulado",
-        type: "line",
-        data: pAT_acum.map(v => +(+v).toFixed(2)),
-        showSymbol: true,         
-        symbol: "circle",         
-        symbolSize: 1,            
-        showAllSymbol: true,      
-        lineStyle: { 
-          width: 3.5,         
-          type: "solid",      
-          color: "#7c3aed"    
-        },
-        itemStyle: { color: "#7c3aed" },
-        label: {
-          show: true,             
-          position: "bottom",     
-          distance: 10,           
-          formatter: (p) => {
-            const val = +p.data;
-            if (val == null || isNaN(val)) return "";
-            return val.toFixed(2).replace(".", ",") + "%";
-          },
-          backgroundColor: "rgba(245, 243, 255, 0.85)", 
-          padding: [2, 4],                             
-          borderRadius: 3,                             
-          borderColor: "rgba(124, 58, 237, 0.25)",      
-          borderWidth: 1,
-          textStyle: { fontWeight: 700, color: "#6d28d9", fontSize: 10 }
-        },
-        emphasis: {
-          disabled: false,
-          scale: false, 
-          label: {
-            show: true, 
-            position: "bottom",
-            formatter: (p) => {
-              const val = +p.data;
-              if (val == null || isNaN(val)) return "";
-              return val.toFixed(2).replace(".", ",") + "%";
-            },
-            textStyle: { fontWeight: 700, color: "#6d28d9", fontSize: 10 }
-          }
-        },
-        // EL MARKLINE CONECTADO DE FORMA IMPECABLE SOBRE LA LÍNEA NO APILADA
-        markLine: {
-          silent: true,
-          symbol: ["none", "none"],
-          lineStyle: { type: "dashed", width: 2, color: "#374151" },
-          data: lineSegments
-        },
-        zlevel: 6, z: 6       
       },
       {
         name: "Promedio días de demora",
@@ -1086,6 +938,7 @@ function buildChartMes(rows) {
           lineStyle: { type: "dashed", width: 2, color: "#374151" },
           data: [{ yAxis: 7 }]
         },
+
         zlevel: 10,
         z: 10
       }
@@ -1099,9 +952,6 @@ function buildChartMes(rows) {
 /* ============================
    CHART 2: Trend lines (ECharts)
 ============================ */
-/* ============================
-   CHART 2: Trend lines (ECharts)
-============================ */
 function buildChartTendencia(rows) {
   const agg = new Map();
   const monthsSet = new Set();
@@ -1109,11 +959,13 @@ function buildChartTendencia(rows) {
   for (const r of rows) {
     const d = parseDateAny(r[FECHA_COL]);
     if (!d) continue;
+
     const mk = monthKey(d);
     monthsSet.add(mk);
 
     if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0 });
     const c = agg.get(mk);
+
     c.at += toNumber(r[AT_COL]);
     c.ft += toNumber(r[FT_COL]);
     c.no += toNumber(r[NO_COL]);
@@ -1125,10 +977,23 @@ function buildChartTendencia(rows) {
     const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0);
     return t ? ((c.at ?? 0) / t) * 100 : 0;
   });
+
+
+
+  // Promedio mensual acumulado de AT %
+  const pAT_acum = [];
+  let accAT = 0;
+  for (let i = 0; i < pAT.length; i++) {
+    const v = +pAT[i] || 0;
+    accAT += v;
+    pAT_acum.push(accAT / (i + 1));
+  }
+
   const pFT = months.map(m => {
     const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0);
     return t ? ((c.ft ?? 0) / t) * 100 : 0;
   });
+
   const pNO = months.map(m => {
     const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0);
     return t ? ((c.no ?? 0) / t) * 100 : 0;
@@ -1136,6 +1001,7 @@ function buildChartTendencia(rows) {
 
   const el = document.getElementById("chartTendencia");
   if (!el || !window.echarts) return;
+
   if (!chartTendencia) chartTendencia = echarts.init(el, null, { renderer: "canvas" });
 
   const option = {
@@ -1159,10 +1025,15 @@ function buildChartTendencia(rows) {
       itemHeight: 10,
       textStyle: { fontWeight: 800 }
     },
-    xAxis: { type: "category", data: months, axisLabel: { fontWeight: 700 } },
+    xAxis: {
+      type: "category",
+      data: months,
+      axisLabel: { fontWeight: 700 }
+    },
     yAxis: {
       type: "value",
-      min: 0,max: 100,
+      min: 0,
+      max: 100,
       axisLabel: { formatter: "{value}%" },
       splitLine: { lineStyle: { color: "rgba(15,23,42,0.10)" } }
     },
@@ -1179,14 +1050,56 @@ function buildChartTendencia(rows) {
           position: "top",
           formatter: (p) => {
             const v = +p.data || 0;
-            return (v < 78) ? `{warn|⚠ ${_fmtPct(v)}}` : `{ok|${_fmtPct(v)}}`;
+            return (v < 78)
+              ? `{warn|⚠ ${_fmtPct(v)}}`
+              : `{ok|${_fmtPct(v)}}`;
           },
           rich: {
             ok: { fontWeight: 900, color: COLORS.green },
-            warn: { fontWeight: 950, color: "#7f1d1d", backgroundColor: "rgba(239,68,68,0.18)", borderColor: "#ef4444", borderWidth: 1, borderRadius: 4, padding: [2, 4] }
+            warn: {
+              fontWeight: 950,
+              color: "#7f1d1d",
+              backgroundColor: "rgba(239,68,68,0.18)",
+              borderColor: "#ef4444",
+              borderWidth: 1,
+              borderRadius: 4,
+              padding: [2, 4]
+            }
           }
         },
         zlevel: 5, z: 5
+      },
+
+      {
+        name: "AT % (Prom. mensual acumulado)",
+        type: "line",
+        data: pAT_acum.map(v => +(+v).toFixed(2)),
+        symbolSize: 7,
+        lineStyle: { width: 2, type: "dashed", color: COLORS.green },
+        itemStyle: { color: COLORS.green, borderColor: "#fff", borderWidth: 2, opacity: 0.9 },
+        label: {
+          show: true,
+          position: "top",
+          formatter: (p) => {
+            const v = +p.data || 0;
+            return (v < 78)
+              ? `{warn|⚠ ${_fmtPct(v)}}`
+              : `{ok|${_fmtPct(v)}}`;
+          },
+          rich: {
+            ok: { fontWeight: 900, color: COLORS.green },
+            warn: {
+              fontWeight: 950,
+              color: "#7f1d1d",
+              backgroundColor: "rgba(239,68,68,0.18)",
+              borderColor: "#ef4444",
+              borderWidth: 1,
+              borderRadius: 4,
+              padding: [2, 4]
+            }
+          }
+        },
+        zlevel: 4, z: 4
       },
       {
         name: "Fuera Tiempo %",
@@ -1214,6 +1127,7 @@ function buildChartTendencia(rows) {
   chartTendencia.setOption(option, true);
   window.addEventListener("resize", () => chartTendencia && chartTendencia.resize(), { passive: true });
 }
+
 /* ============================
    DOWNLOAD: NO ENTREGADOS
 ============================ */
@@ -1258,7 +1172,7 @@ function applyAll() {
   // 3) refresco gcoc desde cliente + clasif2 actual
   const baseParaGc = (() => {
     let r = baseCliente;
-    const c2s = getCheckedClasif2();
+    const c2s = getSelValues("clasif2Select");
     if (c2s.length && CLASIF2_COL) r = r.filter(x => c2s.includes(clean(x[CLASIF2_COL])));
     return r;
   })();
@@ -1286,7 +1200,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // fecha (manual) en header
   setText("lastUpdate", (window.LAST_UPDATE || "").toString().trim() || "--/--/----");
-  fetch(csvUrl + "?t=" + new Date().getTime())
+  fetch(csvUrl)
     .then(r => {
       if (!r.ok) throw new Error(`No pude abrir ${csvUrl} (HTTP ${r.status})`);
       return r.text();
@@ -1345,7 +1259,13 @@ window.addEventListener("DOMContentLoaded", () => {
         applyAll();
       });
 
-      // clasif2Select replaced by checkboxes wired in renderClasif2()
+      document.getElementById("clasif2Select")?.addEventListener("change", (e) => {
+        enforceAllOption(e.target);
+        // al cambiar clasif2, reseteo gcoc (depende del clasif2)
+        const gc = document.getElementById("gcocSelect");
+        if (gc) { gc.selectedIndex = 0; enforceAllOption(gc); }
+        applyAll();
+      });
 
       document.getElementById("gcocSelect")?.addEventListener("change", (e) => { enforceAllOption(e.target); applyAll(); });
 
@@ -1389,9 +1309,5 @@ window.addEventListener("DOMContentLoaded", () => {
       if (loader && !loader.classList.contains("hidden")) loader.classList.add("hidden");
     });
 });
-
-
-
-
 
 
