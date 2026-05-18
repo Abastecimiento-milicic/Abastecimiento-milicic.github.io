@@ -728,8 +728,6 @@ function buildChartMes(rows) {
   const agg = new Map();
   const monthsSet = new Set();
 
-  // El filtrado por checkboxes ya se resolvió en filteredRowsNoMes(),
-  // así que acá procesamos de forma directa y limpia todas las filas recibidas.
   for (const r of rows) {
     const d = parseDateAny(r[FECHA_COL]);
     if (!d) continue;
@@ -763,7 +761,7 @@ function buildChartMes(rows) {
     return (c && c.demCnt) ? (c.demSum / c.demCnt) : null;
   });
 
-  // --- CÁLCULO DEL ACUMULADO INTERACTIVO VIOLETA ---
+  // Cálculo del %AT Acumulado Histórico
   const pAT_acum = [];
   let sumaEntregadosATAcum = 0;
   let sumaComprometidosAcum = 0;
@@ -780,6 +778,56 @@ function buildChartMes(rows) {
   if (!el || !window.echarts) return;
 
   if (!chartMes) chartMes = echarts.init(el, null, { renderer: "canvas" });
+
+  // =====================================================================
+  // --- ARMADO DE LÍNEA CON CONEXIÓN VERTICAL Y UN SOLO CARTEL FINAL ---
+  // =====================================================================
+  const lineSegments = [];
+
+  for (let i = 0; i < months.length; i++) {
+    const anoActual = parseInt(months[i].substring(0, 4), 10);
+    const hActual = (anoActual >= 2026) ? 78 : 75;
+
+    // 1. TRAMO HORIZONTAL DEL MES: Camina recto de principio a fin de la barra actual
+    lineSegments.push([
+      { xAxis: i, yAxis: hActual, label: { show: false } },
+      { xAxis: i + 1, yAxis: hActual, label: { show: false } }
+    ]);
+
+    // 2. CONEXIÓN VERTICAL PERFECTA: Si el mes siguiente cambia de año, tiramos el hilo hacia arriba
+    if (i < months.length - 1) {
+      const anoSig = parseInt(months[i + 1].substring(0, 4), 10);
+      const hSig = (anoSig >= 2026) ? 78 : 75;
+
+      if (hActual !== hSig) {
+        lineSegments.push([
+          { xAxis: i + 1, yAxis: hActual, label: { show: false } },
+          { xAxis: i + 1, yAxis: hSig, label: { show: false } }
+        ]);
+      }
+    }
+  }
+
+  // 3. CARTEL DE LA DERECHA FIJO EN EL BORDE: Un punto único acoplado al final de la visualización
+  lineSegments.push([
+    { yAxis: 78, x: "100%", label: { show: false } }, 
+    { 
+      yAxis: 78, 
+      x: "100%", 
+      label: {
+        show: true,
+        formatter: "Obj 78%",
+        fontWeight: 800,
+        fontSize: 11,
+        position: "end",
+        distance: -4, // Ajuste milimétrico para pegarse al eje derecho
+        backgroundColor: '#374151',
+        color: '#fff',
+        padding: [4, 6],
+        borderRadius: 4
+      } 
+    }
+  ]);
 
   const option = {
     grid: { left: 56, right: 70, top: 40, bottom: 62 },
@@ -894,22 +942,12 @@ function buildChartMes(rows) {
         },
         labelLayout: { hideOverlap: true },
         emphasis: { disabled: true },
+        // EL MARKLINE CONECTADO DE FORMA IMPECABLE
         markLine: {
           silent: true,
           symbol: ["none", "none"],
-          label: {
-            show: true,
-            formatter: "Obj 78%",
-            fontWeight: 800,
-            fontSize: 11,
-            position: "end",
-            backgroundColor: '#374151',
-            color: '#fff',
-            padding: [4, 6],
-            borderRadius: 4
-          },
           lineStyle: { type: "dashed", width: 2, color: "#374151" },
-          data: [{ yAxis: 78 }]
+          data: lineSegments
         },
         z: 1,
         zlevel: 0
@@ -970,50 +1008,36 @@ function buildChartMes(rows) {
         z: 1,
         zlevel: 0
       },
-{
+      {
         name: "%AT Acumulado",
         type: "line",
         data: pAT_acum.map(v => +(+v).toFixed(2)),
-        
-        // Propiedades para que quede siempre fijo y visible en todos los meses
         showSymbol: true,         
         symbol: "circle",         
-        symbolSize: 1,            // Casi invisible para que la línea se vea limpia
-        showAllSymbol: true,      // Fuerza a que se rendericen todas las etiquetas de entrada
-        
+        symbolSize: 1,            
+        showAllSymbol: true,      
         lineStyle: { 
           width: 3.5,         
           type: "solid",      
           color: "#7c3aed"    
         },
         itemStyle: { color: "#7c3aed" },
-        
         label: {
           show: true,             
           position: "bottom",     
           distance: 10,           
-          // ◄ CAMBIO AQUÍ: Muestra siempre 2 decimales fijos y cambia el punto por la coma
           formatter: (p) => {
             const val = +p.data;
             if (val == null || isNaN(val)) return "";
             return val.toFixed(2).replace(".", ",") + "%";
           },
-          
-          // Tu cápsula lavanda sutil
           backgroundColor: "rgba(245, 243, 255, 0.85)", 
           padding: [2, 4],                             
           borderRadius: 3,                             
           borderColor: "rgba(124, 58, 237, 0.25)",      
           borderWidth: 1,
-          
-          textStyle: { 
-            fontWeight: 700, 
-            color: "#6d28d9",                          
-            fontSize: 10                               
-          }
+          textStyle: { fontWeight: 700, color: "#6d28d9", fontSize: 10 }
         },
-        
-        // Mantiene la visual estable y fija con 2 decimales cuando se pasa el cursor por encima
         emphasis: {
           disabled: false,
           scale: false, 
@@ -1028,7 +1052,6 @@ function buildChartMes(rows) {
             textStyle: { fontWeight: 700, color: "#6d28d9", fontSize: 10 }
           }
         },
-        
         zlevel: 6, z: 6       
       },
       {
@@ -1372,6 +1395,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (loader && !loader.classList.contains("hidden")) loader.classList.add("hidden");
     });
 });
+
+
 
 
 
