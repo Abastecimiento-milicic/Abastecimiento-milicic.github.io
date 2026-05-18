@@ -728,6 +728,8 @@ function buildChartMes(rows) {
   const agg = new Map();
   const monthsSet = new Set();
 
+  // El filtrado por checkboxes ya se resolvió en filteredRowsNoMes(),
+  // así que acá procesamos de forma directa y limpia todas las filas recibidas.
   for (const r of rows) {
     const d = parseDateAny(r[FECHA_COL]);
     if (!d) continue;
@@ -735,12 +737,13 @@ function buildChartMes(rows) {
     const mk = monthKey(d);
     monthsSet.add(mk);
 
-    if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0, demSum: 0, demCnt: 0 });
+    if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0, comp: 0, demSum: 0, demCnt: 0 });
     const c = agg.get(mk);
 
     c.at += toNumber(r[AT_COL]);
     c.ft += toNumber(r[FT_COL]);
     c.no += toNumber(r[NO_COL]);
+    c.comp += toNumber(r["COMPROMETIDOS"]) || (toNumber(r[AT_COL]) + toNumber(r[FT_COL]) + toNumber(r[NO_COL]));
 
     const dem = toNumAny(r[DEMORA_COL]);
     if (!isNaN(dem)) { c.demSum += dem; c.demCnt += 1; }
@@ -760,6 +763,19 @@ function buildChartMes(rows) {
     return (c && c.demCnt) ? (c.demSum / c.demCnt) : null;
   });
 
+  // --- CÁLCULO DEL ACUMULADO INTERACTIVO VIOLETA ---
+  const pAT_acum = [];
+  let sumaEntregadosATAcum = 0;
+  let sumaComprometidosAcum = 0;
+
+  for (let i = 0; i < months.length; i++) {
+    const c = agg.get(months[i]);
+    sumaEntregadosATAcum += (c?.at ?? 0);
+    sumaComprometidosAcum += (c?.comp ?? 0);
+    const pctAcum = sumaComprometidosAcum ? (sumaEntregadosATAcum / sumaComprometidosAcum) * 100 : 0;
+    pAT_acum.push(pctAcum);
+  }
+
   const el = document.getElementById("chartMes");
   if (!el || !window.echarts) return;
 
@@ -778,11 +794,13 @@ function buildChartMes(rows) {
         const at = byName["Entregados AT"];
         const ft = byName["Entregados FT"];
         const ne = byName["No entregados"];
+        const acum = byName["%AT Acumulado"];
         const dem = byName["Promedio días de demora"];
 
         if (at) html += `🟩 AT: <b>${fmtInt(qAT[at.dataIndex])}</b> (${_fmtNum1(at.value)}%)<br/>`;
         if (ft) html += `🟧 FT: <b>${fmtInt(qFT[ft.dataIndex])}</b> (${_fmtNum1(ft.value)}%)<br/>`;
         if (ne) html += `🟥 NE: <b>${fmtInt(qNO[ne.dataIndex])}</b> (${_fmtNum1(ne.value)}%)<br/>`;
+        if (acum) html += `🟪 %AT Acumulado: <b>${_fmtNum1(acum.value)}%</b><br/>`;
         if (dem && dem.value != null) html += `🔵 Demora prom.: <b>${Math.round(dem.value)}</b> días<br/>`;
         return html;
       }
@@ -822,14 +840,13 @@ function buildChartMes(rows) {
         name: "Entregados AT",
         type: "bar",
         stack: "pct",
-        // ✅ Si el valor es < 78%, agregamos borde rojo (estilo de alerta)
         data: pAT.map(v => {
           const val = +(+v).toFixed(4);
           if (val < 78) {
             return {
               value: val,
               itemStyle: {
-                borderColor: '#dc2626', // Rojo sólido oscuro (contrastante)
+                borderColor: '#dc2626',
                 borderWidth: 2,
                 borderType: 'solid',
                 borderRadius: [6, 6, 0, 0]
@@ -851,21 +868,17 @@ function buildChartMes(rows) {
             const pct = +p.value || 0;
             const q = (qAT)[i] || 0;
             if (!q) return "";
-            if (pct < 6) return ""; // no mostramos etiquetas si es muy chico
+            if (pct < 6) return "";
             const pctRound = Math.round(pct);
-
-            // Si es menor a 78%, usamos estilo de alerta (ico peligro + rojo)
-            if (pct < 78) {
-              return `{warn|${fmtInt(q)}\n⚠ (${pctRound}%)}`;
-            }
+            if (pct < 78) return `{warn|${fmtInt(q)}\n⚠ (${pctRound}%)}`;
             return `${fmtInt(q)}\n(${pctRound}%)`;
           },
           rich: {
             warn: {
               fontWeight: 950,
-              color: "#7f1d1d", // rojo oscuro texto
-              backgroundColor: "rgba(254, 202, 202, 0.9)", // rojo claro fondo (casi opaco para tapar barra)
-              borderColor: "#b91c1c", // borde rojo fuerte
+              color: "#7f1d1d",
+              backgroundColor: "rgba(254, 202, 202, 0.9)",
+              borderColor: "#b91c1c",
               borderWidth: 1.5,
               borderRadius: 4,
               padding: [2, 4],
@@ -880,7 +893,6 @@ function buildChartMes(rows) {
           padding: [2, 4]
         },
         labelLayout: { hideOverlap: true },
-
         emphasis: { disabled: true },
         markLine: {
           silent: true,
@@ -896,10 +908,9 @@ function buildChartMes(rows) {
             padding: [4, 6],
             borderRadius: 4
           },
-          lineStyle: { type: "dashed", width: 2, color: "#374151" }, // Gris oscuro fuerte
+          lineStyle: { type: "dashed", width: 2, color: "#374151" },
           data: [{ yAxis: 78 }]
         },
-
         z: 1,
         zlevel: 0
       },
@@ -927,7 +938,6 @@ function buildChartMes(rows) {
           }
         },
         labelLayout: { hideOverlap: true },
-
         emphasis: { disabled: true },
         z: 1,
         zlevel: 0
@@ -956,10 +966,70 @@ function buildChartMes(rows) {
           }
         },
         labelLayout: { hideOverlap: true },
-
         emphasis: { disabled: true },
         z: 1,
         zlevel: 0
+      },
+{
+        name: "%AT Acumulado",
+        type: "line",
+        data: pAT_acum.map(v => +(+v).toFixed(2)),
+        
+        // Propiedades para que quede siempre fijo y visible en todos los meses
+        showSymbol: true,         
+        symbol: "circle",         
+        symbolSize: 1,            // Casi invisible para que la línea se vea limpia
+        showAllSymbol: true,      // Fuerza a que se rendericen todas las etiquetas de entrada
+        
+        lineStyle: { 
+          width: 3.5,         
+          type: "solid",      
+          color: "#7c3aed"    
+        },
+        itemStyle: { color: "#7c3aed" },
+        
+        label: {
+          show: true,             
+          position: "bottom",     
+          distance: 10,           
+          // ◄ CAMBIO AQUÍ: Muestra siempre 2 decimales fijos y cambia el punto por la coma
+          formatter: (p) => {
+            const val = +p.data;
+            if (val == null || isNaN(val)) return "";
+            return val.toFixed(2).replace(".", ",") + "%";
+          },
+          
+          // Tu cápsula lavanda sutil
+          backgroundColor: "rgba(245, 243, 255, 0.85)", 
+          padding: [2, 4],                             
+          borderRadius: 3,                             
+          borderColor: "rgba(124, 58, 237, 0.25)",      
+          borderWidth: 1,
+          
+          textStyle: { 
+            fontWeight: 700, 
+            color: "#6d28d9",                          
+            fontSize: 10                               
+          }
+        },
+        
+        // Mantiene la visual estable y fija con 2 decimales cuando se pasa el cursor por encima
+        emphasis: {
+          disabled: false,
+          scale: false, 
+          label: {
+            show: true, 
+            position: "bottom",
+            formatter: (p) => {
+              const val = +p.data;
+              if (val == null || isNaN(val)) return "";
+              return val.toFixed(2).replace(".", ",") + "%";
+            },
+            textStyle: { fontWeight: 700, color: "#6d28d9", fontSize: 10 }
+          }
+        },
+        
+        zlevel: 6, z: 6       
       },
       {
         name: "Promedio días de demora",
@@ -999,7 +1069,6 @@ function buildChartMes(rows) {
           lineStyle: { type: "dashed", width: 2, color: "#374151" },
           data: [{ yAxis: 7 }]
         },
-
         zlevel: 10,
         z: 10
       }
@@ -1013,6 +1082,9 @@ function buildChartMes(rows) {
 /* ============================
    CHART 2: Trend lines (ECharts)
 ============================ */
+/* ============================
+   CHART 2: Trend lines (ECharts)
+============================ */
 function buildChartTendencia(rows) {
   const agg = new Map();
   const monthsSet = new Set();
@@ -1020,13 +1092,11 @@ function buildChartTendencia(rows) {
   for (const r of rows) {
     const d = parseDateAny(r[FECHA_COL]);
     if (!d) continue;
-
     const mk = monthKey(d);
     monthsSet.add(mk);
 
     if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0 });
     const c = agg.get(mk);
-
     c.at += toNumber(r[AT_COL]);
     c.ft += toNumber(r[FT_COL]);
     c.no += toNumber(r[NO_COL]);
@@ -1038,23 +1108,10 @@ function buildChartTendencia(rows) {
     const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0);
     return t ? ((c.at ?? 0) / t) * 100 : 0;
   });
-
-
-
-  // Promedio mensual acumulado de AT %
-  const pAT_acum = [];
-  let accAT = 0;
-  for (let i = 0; i < pAT.length; i++) {
-    const v = +pAT[i] || 0;
-    accAT += v;
-    pAT_acum.push(accAT / (i + 1));
-  }
-
   const pFT = months.map(m => {
     const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0);
     return t ? ((c.ft ?? 0) / t) * 100 : 0;
   });
-
   const pNO = months.map(m => {
     const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0);
     return t ? ((c.no ?? 0) / t) * 100 : 0;
@@ -1062,7 +1119,6 @@ function buildChartTendencia(rows) {
 
   const el = document.getElementById("chartTendencia");
   if (!el || !window.echarts) return;
-
   if (!chartTendencia) chartTendencia = echarts.init(el, null, { renderer: "canvas" });
 
   const option = {
@@ -1086,15 +1142,10 @@ function buildChartTendencia(rows) {
       itemHeight: 10,
       textStyle: { fontWeight: 800 }
     },
-    xAxis: {
-      type: "category",
-      data: months,
-      axisLabel: { fontWeight: 700 }
-    },
+    xAxis: { type: "category", data: months, axisLabel: { fontWeight: 700 } },
     yAxis: {
       type: "value",
-      min: 0,
-      max: 100,
+      min: 0,max: 100,
       axisLabel: { formatter: "{value}%" },
       splitLine: { lineStyle: { color: "rgba(15,23,42,0.10)" } }
     },
@@ -1111,56 +1162,14 @@ function buildChartTendencia(rows) {
           position: "top",
           formatter: (p) => {
             const v = +p.data || 0;
-            return (v < 78)
-              ? `{warn|⚠ ${_fmtPct(v)}}`
-              : `{ok|${_fmtPct(v)}}`;
+            return (v < 78) ? `{warn|⚠ ${_fmtPct(v)}}` : `{ok|${_fmtPct(v)}}`;
           },
           rich: {
             ok: { fontWeight: 900, color: COLORS.green },
-            warn: {
-              fontWeight: 950,
-              color: "#7f1d1d",
-              backgroundColor: "rgba(239,68,68,0.18)",
-              borderColor: "#ef4444",
-              borderWidth: 1,
-              borderRadius: 4,
-              padding: [2, 4]
-            }
+            warn: { fontWeight: 950, color: "#7f1d1d", backgroundColor: "rgba(239,68,68,0.18)", borderColor: "#ef4444", borderWidth: 1, borderRadius: 4, padding: [2, 4] }
           }
         },
         zlevel: 5, z: 5
-      },
-
-      {
-        name: "AT % (Prom. mensual acumulado)",
-        type: "line",
-        data: pAT_acum.map(v => +(+v).toFixed(2)),
-        symbolSize: 7,
-        lineStyle: { width: 2, type: "dashed", color: COLORS.green },
-        itemStyle: { color: COLORS.green, borderColor: "#fff", borderWidth: 2, opacity: 0.9 },
-        label: {
-          show: true,
-          position: "top",
-          formatter: (p) => {
-            const v = +p.data || 0;
-            return (v < 78)
-              ? `{warn|⚠ ${_fmtPct(v)}}`
-              : `{ok|${_fmtPct(v)}}`;
-          },
-          rich: {
-            ok: { fontWeight: 900, color: COLORS.green },
-            warn: {
-              fontWeight: 950,
-              color: "#7f1d1d",
-              backgroundColor: "rgba(239,68,68,0.18)",
-              borderColor: "#ef4444",
-              borderWidth: 1,
-              borderRadius: 4,
-              padding: [2, 4]
-            }
-          }
-        },
-        zlevel: 4, z: 4
       },
       {
         name: "Fuera Tiempo %",
@@ -1188,7 +1197,6 @@ function buildChartTendencia(rows) {
   chartTendencia.setOption(option, true);
   window.addEventListener("resize", () => chartTendencia && chartTendencia.resize(), { passive: true });
 }
-
 /* ============================
    DOWNLOAD: NO ENTREGADOS
 ============================ */
@@ -1364,6 +1372,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (loader && !loader.classList.contains("hidden")) loader.classList.add("hidden");
     });
 });
+
 
 
 
