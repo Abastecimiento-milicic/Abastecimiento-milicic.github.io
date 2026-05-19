@@ -1,3 +1,47 @@
+
+fetch("/.auth/me")
+  .then(response => response.json())
+  .then(data => {
+
+    const user = data.clientPrincipal;
+
+    if (!user) {
+      window.location.href = "/.auth/login/aad";
+      return;
+    }
+
+    const email = user.userDetails;
+
+    if (!email.endsWith("@milicic.com.ar")) {
+
+      document.body.innerHTML = `
+        <div style="
+          display:flex;
+          justify-content:center;
+          align-items:center;
+          height:100vh;
+          font-family:Arial;
+          flex-direction:column;
+          background:#f5f5f5;
+        ">
+          <h1>Acceso denegado</h1>
+          <p>Solo usuarios Milicic pueden ingresar.</p>
+        </div>
+      `;
+
+      return;
+    }
+
+    console.log("Usuario autorizado:", email);
+
+  });
+/* ============================
+ lo de arriva lo agregue para la autenticacion de AZURE
+============================ */
+
+
+
+
 function _fmtPct(v) { if (v == null || isNaN(v)) return ""; const n = Math.round(v * 10) / 10; return n.toString().replace(".", ",") + "%"; }
 function _fmtNum1(v) { if (v == null || isNaN(v)) return ""; const n = Math.round(v * 10) / 10; return n.toString().replace(".", ","); }
 
