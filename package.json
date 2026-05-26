@@ -1,10 +1,10 @@
 {
-  "name": "abastecimiento-milicic",
+  "name": "portal-web",
   "version": "1.0.0",
   "scripts": {
-    "start": "serve -s ."
+    "start": "npx http-server ."
   },
   "dependencies": {
-    "serve": "^14.2.1"
+    "http-server": "^14.1.1"
   }
 }
