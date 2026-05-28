@@ -1,0 +1,146 @@
+/* ===== Demoras (demoras.html) ===== */
+
+@media (min-width: 900px) {
+  .page-demoras .filters.filters-demoras {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.page-demoras .filter-flex {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.page-demoras .filter-flex select {
+  flex: 1;
+}
+
+.page-demoras .filter-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (min-width: 1100px) {
+  .page-demoras .kpi-grid.kpi-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+
+/* ===== Tabla Demoras con bordes y heatmap ===== */
+.page-demoras .table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-sm);
+  background: #ffffff;
+  margin-top: 14px;
+}
+
+.page-demoras #dem_tablaAreas,
+.page-demoras #dem_tablaMotivos {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--font-body);
+  table-layout: auto !important; /* Auto scaling so columns fit beautifully */
+}
+
+.page-demoras #dem_tablaAreas th,
+.page-demoras #dem_tablaAreas td,
+.page-demoras #dem_tablaMotivos th,
+.page-demoras #dem_tablaMotivos td {
+  border: 1px solid #d0d7de;
+  padding: 10px 12px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+/* Specific column minimum widths so text never gets squished */
+.page-demoras #dem_tablaAreas th,
+.page-demoras #dem_tablaAreas td {
+  min-width: 95px;
+}
+.page-demoras #dem_tablaAreas th:first-child,
+.page-demoras #dem_tablaAreas td:first-child {
+  min-width: 80px;
+  font-weight: bold;
+}
+
+.page-demoras #dem_tablaMotivos th,
+.page-demoras #dem_tablaMotivos td {
+  min-width: 120px;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+.page-demoras #dem_tablaMotivos th:first-child,
+.page-demoras #dem_tablaMotivos td:first-child {
+  min-width: 80px;
+  font-weight: bold;
+}
+
+/* Headers Styling */
+.page-demoras #dem_tablaAreas thead th {
+  background: #f3f6f5;
+  border-bottom: 3.5px solid #0b5d46 !important;
+  font-weight: 700;
+  color: #0b1220;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.page-demoras #dem_tablaMotivos thead th {
+  background: #111827;
+  color: #ffffff;
+  font-weight: 700;
+  border-bottom: 3.5px solid #3b82f6 !important;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+/* Hover effects */
+.page-demoras #dem_tablaAreas tbody tr:hover td,
+.page-demoras #dem_tablaMotivos tbody tr:hover td {
+  filter: brightness(0.96);
+  transition: filter 0.15s ease;
+}
+
+/* Wrapper specifics */
+.page-demoras .table-wrap.table-wrap-tight {
+  overflow-x: auto !important; /* Allow scroll if content exceeds container width */
+}
+
+/* ===== DEMORAS: charts one below the other ===== */
+.page-demoras .grid-2 {
+  grid-template-columns: 1fr !important;
+}
+
+
+/* ===== Filtro MES + botón descarga en la misma línea ===== */
+.page-demoras .filter-inline {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.page-demoras .filter-inline select {
+  flex: 1 1 auto;
+}
+
+.page-demoras .btn.btn-sm {
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+
+/* ===== Chart Mes (ECharts) ===== */
+.page-demoras #chartMes {
+  height: 500px;
+}
