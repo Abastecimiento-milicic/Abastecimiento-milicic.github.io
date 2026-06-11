@@ -989,7 +989,7 @@
           z: 1,
           zlevel: 0
         },
-        {
+       {
           name: "%AT Acumulado",
           type: "line",
           data: pAT_acum.map(v => +(+v).toFixed(2)),
@@ -1005,17 +1005,17 @@
           itemStyle: { color: "#7c3aed" },
           label: {
             show: true,             
-            position: "top",     // <--- Cambiado de "bottom" a "top"
-            distance: 12,        // <--- Más espacio vertical
+            position: "left",     // <--- CAMBIADO A "left": El porcentaje se mueve a la izquierda de la línea
+            distance: 8,          // Espacio horizontal para que no pise el nodo
             formatter: (p) => {
               const val = +p.data;
               if (val == null || isNaN(val)) return "";
               return val.toFixed(2).replace(".", ",") + "%";
             },
-            backgroundColor: "rgba(245, 243, 255, 0.85)", 
+            backgroundColor: "rgba(245, 243, 255, 0.9)", // Un poquito más opaco para tapar la barra del fondo
             padding: [2, 4],                             
             borderRadius: 3,                             
-            borderColor: "rgba(124, 58, 237, 0.25)",      
+            borderColor: "rgba(124, 58, 237, 0.4)",      
             borderWidth: 1,
             textStyle: { fontWeight: 700, color: "#6d28d9", fontSize: 10 }
           },
@@ -1024,7 +1024,7 @@
             scale: false, 
             label: {
               show: true, 
-              position: "top",  // <--- También lo cambiamos en el estado hover
+              position: "left",   // <--- También a la izquierda en el estado hover
               formatter: (p) => {
                 const val = +p.data;
                 if (val == null || isNaN(val)) return "";
@@ -1048,9 +1048,9 @@
           itemStyle: { color: COLORS.blue, borderColor: "#fff", borderWidth: 2 },
           label: {
             show: true,
-            position: "top",
-            distance: 10,       // <--- Sumamos esta línea para separar el "8 d" hacia arriba
-            backgroundColor: "rgba(255,255,255,0.75)",
+            position: "right",    // <--- CAMBIADO A "right": Los días ("8 d") se mueven a la derecha de la línea
+            distance: 8,          // Espacio horizontal respecto al punto azul
+            backgroundColor: "rgba(255,255,255,0.85)", // Más opaco para un contraste perfecto
             padding: [2, 4],
             borderRadius: 4,
             fontWeight: 950,
