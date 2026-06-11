@@ -1005,8 +1005,8 @@
           itemStyle: { color: "#7c3aed" },
           label: {
             show: true,             
-            position: "bottom",     
-            distance: 10,           
+            position: "top",     // <--- Cambiado de "bottom" a "top"
+            distance: 12,        // <--- Más espacio vertical
             formatter: (p) => {
               const val = +p.data;
               if (val == null || isNaN(val)) return "";
@@ -1024,7 +1024,7 @@
             scale: false, 
             label: {
               show: true, 
-              position: "bottom",
+              position: "top",  // <--- También lo cambiamos en el estado hover
               formatter: (p) => {
                 const val = +p.data;
                 if (val == null || isNaN(val)) return "";
@@ -1049,6 +1049,7 @@
           label: {
             show: true,
             position: "top",
+            distance: 10,       // <--- Sumamos esta línea para separar el "8 d" hacia arriba
             backgroundColor: "rgba(255,255,255,0.75)",
             padding: [2, 4],
             borderRadius: 4,
