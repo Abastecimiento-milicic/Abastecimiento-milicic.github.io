@@ -1005,32 +1005,32 @@
           itemStyle: { color: "#7c3aed" },
           label: {
             show: true,             
-            position: "left",     // <--- CAMBIADO A "left": El porcentaje se mueve a la izquierda de la línea
-            distance: 8,          // Espacio horizontal para que no pise el nodo
+            position: "top",      // <--- Forzamos a que el porcentaje flote ARRIBA de la línea morada
+            distance: 8,          // Separación justa para que quede por encima de la barra
             formatter: (p) => {
               const val = +p.data;
               if (val == null || isNaN(val)) return "";
               return val.toFixed(2).replace(".", ",") + "%";
             },
-            backgroundColor: "rgba(245, 243, 255, 0.9)", // Un poquito más opaco para tapar la barra del fondo
+            backgroundColor: "rgba(255, 255, 255, 0.85)", // Fondo blanco limpio para aislarlo de los colores de atrás
             padding: [2, 4],                             
             borderRadius: 3,                             
-            borderColor: "rgba(124, 58, 237, 0.4)",      
+            borderColor: "rgba(124, 58, 237, 0.3)",      
             borderWidth: 1,
-            textStyle: { fontWeight: 700, color: "#6d28d9", fontSize: 10 }
+            textStyle: { fontWeight: 850, color: "#6d28d9", fontSize: 10 }
           },
           emphasis: {
             disabled: false,
             scale: false, 
             label: {
               show: true, 
-              position: "left",   // <--- También a la izquierda en el estado hover
+              position: "top",
               formatter: (p) => {
                 const val = +p.data;
                 if (val == null || isNaN(val)) return "";
                 return val.toFixed(2).replace(".", ",") + "%";
               },
-              textStyle: { fontWeight: 700, color: "#6d28d9", fontSize: 10 }
+              textStyle: { fontWeight: 850, color: "#6d28d9", fontSize: 10 }
             }
           },
           z: 6
@@ -1041,16 +1041,15 @@
           yAxisIndex: 1,
           data: avgDem,
           symbol: "circle",
-          symbolSize: 7,
-          showSymbol: true,
+          showSymbol: false,      // <--- ¡LOGRADO! Esto elimina por completo los puntos azules de la línea
           connectNulls: true,
           lineStyle: { width: 3, color: COLORS.blue },
-          itemStyle: { color: COLORS.blue, borderColor: "#fff", borderWidth: 2 },
+          itemStyle: { color: COLORS.blue },
           label: {
             show: true,
-            position: "right",    // <--- CAMBIADO A "right": Los días ("8 d") se mueven a la derecha de la línea
-            distance: 8,          // Espacio horizontal respecto al punto azul
-            backgroundColor: "rgba(255,255,255,0.85)", // Más opaco para un contraste perfecto
+            position: "bottom",   // <--- Cambiado a "bottom": El cartel "8 d" colgará DEBAJO de la línea celeste
+            distance: 10,         // Lo estira hacia abajo para que quede en el hueco libre
+            backgroundColor: "rgba(255,255,255,0.9)", 
             padding: [2, 4],
             borderRadius: 4,
             fontWeight: 950,
