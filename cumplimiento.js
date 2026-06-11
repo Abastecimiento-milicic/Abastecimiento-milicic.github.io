@@ -864,7 +864,7 @@
           boundaryGap: [0, '25%']
         }
       ],
-      series: [
+    series: [
         {
           name: "Entregados AT",
           type: "bar",
@@ -888,7 +888,8 @@
           itemStyle: { color: COLORS.green, borderRadius: [6, 6, 0, 0] },
           label: {
             show: true,
-            position: "inside",
+            position: "insideBottom", // <--- Lo bajamos un toque al piso de la barra verde para dejar libre el centro
+            distance: 10,
             fontWeight: 900,
             fontSize: 11,
             lineHeight: 12,
@@ -942,7 +943,8 @@
           itemStyle: { color: COLORS.amber },
           label: {
             show: true,
-            position: "inside",
+            position: "insideTop", // <--- Forzamos a que el texto naranja ("630 (19%)") vaya al techo de su bloque, lejos de la línea morada
+            distance: 4,
             color: "#111",
             fontWeight: 950,
             fontSize: 11,
@@ -952,7 +954,7 @@
               const pct = +p.data || 0;
               const q = (qFT)[i] || 0;
               if (!q) return "";
-              if (pct < 6) return "";
+              if (pct < 8) return ""; // Si el bloque es muy chico (menos de 8%), no ponemos etiqueta para que no tape nada
               return `${fmtInt(q)}\n(${Math.round(pct)}%)`;
             }
           },
@@ -970,18 +972,21 @@
           itemStyle: { color: COLORS.red },
           label: {
             show: true,
-            position: "inside",
+            position: "top", // <--- Las alertas rojas van ARRIBA de todo de la barra externa
+            distance: 2,
             color: "#fff",
             fontWeight: 900,
             fontSize: 11,
             lineHeight: 12,
+            backgroundColor: "rgba(239, 68, 68, 0.9)", // Le da un fondo rojo nítido para que flote limpio
+            padding: [2, 4],
+            borderRadius: 3,
             formatter: (p) => {
               const i = p.dataIndex;
               const pct = +p.data || 0;
               const q = (qNO)[i] || 0;
               if (!q) return "";
-              if (pct < 6) return "";
-              return `${fmtInt(q)}\n(${Math.round(pct)}%)`;
+              return `${fmtInt(q)} (${Math.round(pct)}%)`;
             }
           },
           labelLayout: { hideOverlap: true },
