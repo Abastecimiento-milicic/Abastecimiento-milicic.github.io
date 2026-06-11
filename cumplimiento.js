@@ -1005,17 +1005,17 @@
           itemStyle: { color: "#7c3aed" },
           label: {
             show: true,             
-            position: "top",      // <--- Forzamos a que el porcentaje flote ARRIBA de la línea morada
-            distance: 8,          // Separación justa para que quede por encima de la barra
+            position: "bottom",   // <--- Vuelve abajo para no irse al techo
+            distance: 6,          // Ajuste fino para que quede pegado abajo de la línea morada
             formatter: (p) => {
               const val = +p.data;
               if (val == null || isNaN(val)) return "";
               return val.toFixed(2).replace(".", ",") + "%";
             },
-            backgroundColor: "rgba(255, 255, 255, 0.85)", // Fondo blanco limpio para aislarlo de los colores de atrás
+            backgroundColor: "rgba(255, 255, 255, 0.85)", // Mantiene el cartel blanco para legibilidad
             padding: [2, 4],                             
             borderRadius: 3,                             
-            borderColor: "rgba(124, 58, 237, 0.3)",      
+            borderColor: "rgba(124, 58, 237, 0.25)",      
             borderWidth: 1,
             textStyle: { fontWeight: 850, color: "#6d28d9", fontSize: 10 }
           },
@@ -1024,7 +1024,7 @@
             scale: false, 
             label: {
               show: true, 
-              position: "top",
+              position: "bottom",
               formatter: (p) => {
                 const val = +p.data;
                 if (val == null || isNaN(val)) return "";
@@ -1041,15 +1041,16 @@
           yAxisIndex: 1,
           data: avgDem,
           symbol: "circle",
-          showSymbol: false,      // <--- ¡LOGRADO! Esto elimina por completo los puntos azules de la línea
+          symbolSize: 0,          // <--- TRUCO: Hace invisibles los círculos sin romper los textos
+          showSymbol: true,       // <--- Mantiene activo el motor de etiquetas
           connectNulls: true,
           lineStyle: { width: 3, color: COLORS.blue },
           itemStyle: { color: COLORS.blue },
           label: {
             show: true,
-            position: "bottom",   // <--- Cambiado a "bottom": El cartel "8 d" colgará DEBAJO de la línea celeste
-            distance: 10,         // Lo estira hacia abajo para que quede en el hueco libre
-            backgroundColor: "rgba(255,255,255,0.9)", 
+            position: "top",      // Las etiquetas de días flotan arriba de la línea celeste
+            distance: 8,
+            backgroundColor: "rgba(255,255,255,0.85)", 
             padding: [2, 4],
             borderRadius: 4,
             fontWeight: 950,
