@@ -2,16 +2,11 @@
 // Formato sugerido: dd/mm/aaaa
 window.LAST_UPDATE = "22/06/2026";
 
-let cb = sessionStorage.getItem('mi_cache_buster');
-if (!cb) {
-  cb = new Date().getTime();
-  sessionStorage.setItem('mi_cache_buster', cb);
-}
-window.CACHE_BUSTER = cb;
+// Genera un número único nuevo en cada recarga, forzando la lectura real
+window.CACHE_BUSTER = new Date().getTime();
 
 window.forceRefreshData = function() {
-  sessionStorage.removeItem('mi_cache_buster');
-  // Also clear IndexedDB data cache (if available)
+  // Mantenemos la función por compatibilidad con el botón de refresco
   if (typeof window.clearDataCache === 'function') {
     window.clearDataCache().finally(() => window.location.reload());
   } else {
