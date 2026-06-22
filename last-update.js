@@ -1,11 +1,16 @@
-// Obtiene la fecha actual formateada explícitamente para Argentina (dd/mm/aaaa)
-const opciones = { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' };
-window.LAST_UPDATE = new Date().toLocaleDateString('es-AR', opciones);
+// Editá SOLO este archivo para cambiar la fecha mostrada en el header.
+window.LAST_UPDATE = "22/06/2026";
 
-// Genera un número único nuevo en cada recarga para romper la caché
-window.CACHE_BUSTER = new Date().getTime();
+let cb = sessionStorage.getItem('mi_cache_buster');
+if (!cb) {
+  cb = new Date().getTime();
+  sessionStorage.setItem('mi_cache_buster', cb);
+}
+window.CACHE_BUSTER = cb;
 
 window.forceRefreshData = function() {
+  sessionStorage.removeItem('mi_cache_buster');
+
   if (typeof window.clearDataCache === 'function') {
     window.clearDataCache().finally(() => window.location.reload());
   } else {
