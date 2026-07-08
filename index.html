@@ -206,24 +206,23 @@
       <div id="cumpl_msg"></div>
 
       <!-- FILTROS -->
-      <section class="panel">
+     <section class="panel">
         <div class="panel-title" style="display: flex; align-items: center;">FILTROS
           <button id="cumpl_btnClearFilters" class="btn-clear" title="Restablecer todos los filtros">🧹 Limpiar Filtros</button>
           <button class="help-btn" onclick="openHelp('Filtros — Cumplimiento', `
             <h4>Cliente / Obra</h4>
-            <p>Filtrá los pedidos por el nombre de la obra o cliente. Podés seleccionar varios con <strong>Ctrl + clic</strong>.</p>
+            <p>Filtrá los pedidos por el nombre de la obra o cliente.</p>
             <h4>Clasificación</h4>
-            <p>La clasificacion agrupa los grupos de compra de acuerdo al tipo de pedido solicitado.</p>
+            <p>La clasificacion agrupa los grupos de compra.</p>
             <h4>GC OC</h4>
             <p>Filtrá por Grupo de Compra</p>
             <h4>Mes de Entrega</h4>
-            <p>Seleccioná uno o varios meses (formato <em>MMM-AAAA</em>) para acotar el período analizado.</p>
-            <h4>⬇ Descargar NO entregados</h4>
-            <p>Exporta en CSV el listado de pedidos no entregados según los filtros activos.</p>
-            <div class=&quot;hm-tip&quot;>💡 Si no seleccionás ningún filtro, se muestran todos los datos disponibles.</div>
+            <p>Seleccioná el período analizado.</p>
           `)" title="Ayuda sobre los filtros">ℹ</button>
         </div>
-        <div class="panel-body filters filters-6">
+        
+        <div class="panel-body filters" style="display: grid !important; grid-template-columns: repeat(6, 1fr) !important; gap: 12px; padding: 15px !important; align-items: start;">
+          
           <div class="filter">
             <label>CLIENTE / OBRA</label>
             <select id="cumpl_clienteSelect" multiple size="6" class="multi-select">
@@ -254,7 +253,7 @@
             <div id="cumpl_mesHint" class="hint">Mes seleccionado</div>
           </div>
 
-       <div class="filter">
+          <div class="filter">
             <label>CENTRO</label>
             <select id="centroSelect" multiple size="6" class="multi-select">
               <option value="">Todos</option>
@@ -262,25 +261,24 @@
             <div id="centroHint" class="hint">Columna: -</div>
           </div>
 
-          <div class="filter" style="display: flex; flex-direction: column; height: 100%;">
-            <label style="background-color: #2563eb; display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 8px; width: 100%; justify-content: center; box-sizing: border-box;" title="Activar para filtrar solo datos de almacén">
-              <input type="checkbox" id="chkSoloAlmacen" style="margin: 0; cursor: pointer;">
-              VER SOLO ALMACÉN
-            </label>
-            <select id="condicionAlmacenSelect" multiple size="4" class="multi-select" style="height: 110px !important;" disabled>
-              <option value="">(Activa la casilla arriba)</option>
-            </select>
-            <div id="condicionAlmacenHint" class="hint">Columna: -</div>
-          </div>
+          <div class="filter" style="display: flex; flex-direction: column; gap: 10px; min-height: 155px; justify-content: space-between;">
+            <div style="width: 100%;">
+              <label style="background-color: #2563eb; display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 6px; width: 100%; justify-content: center; box-sizing: border-box; font-size: 0.72rem; padding: 2px 4px;" title="Activar para filtrar solo datos de almacén">
+                <input type="checkbox" id="chkSoloAlmacen" style="margin: 0; cursor: pointer;">
+                VER SOLO ALMACÉN
+              </label>
+              <select id="condicionAlmacenSelect" multiple size="2" class="multi-select" style="height: 52px !important; font-size: 0.8rem;" disabled>
+                <option value="">(Activa arriba)</option>
+              </select>
+              <div id="condicionAlmacenHint" class="hint" style="margin-top: 2px;">Columna: -</div>
+            </div>
 
-          <div class="filter">
-            <label>&nbsp;</label>
-            <button id="cumpl_btnDownloadNO" class="btn">
+            <button id="cumpl_btnDownloadNO" class="btn" style="width: 100% !important; font-size: 0.72rem !important; padding: 6px 2px; height: 32px !important; margin: 0 !important; white-space: nowrap;">
               ⬇ Descargar NO entregados
             </button>
-            <div class="hint">Exporta CSV con “;”</div>
           </div>
-          
+
+        </div>
       </section>
 
       <!-- KPIs ACUMULADO -->
