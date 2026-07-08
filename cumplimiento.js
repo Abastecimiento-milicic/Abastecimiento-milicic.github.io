@@ -414,7 +414,7 @@
     fillSelect("centroSelect", vals, "Todos");
   }
 
-  function renderCondicionAlmacen() {
+ function renderCondicionAlmacen() {
     const hint = document.getElementById("condicionAlmacenHint");
     if (!CONDICION_ALMACEN_COL) {
       if (hint) hint.textContent = "Columna: (no encontrada)";
@@ -424,11 +424,14 @@
     }
     if (hint) hint.textContent = `Columna: ${CONDICION_ALMACEN_COL}`;
     
-    const vals = uniqSorted(data.map(r => r[CONDICION_ALMACEN_COL]));
+    // 🌟 OPTIMIZACIÓN: Extraemos los valores basados en las filas que ya pasaron por el filtro de obra activo
+    const filasBase = rowsByClienteBase();
+    const vals = uniqSorted(filasBase.map(r => r[CONDICION_ALMACEN_COL]));
+    
+    const sel = document.getElementById("condicionAlmacenSelect");
     fillSelect("condicionAlmacenSelect", vals, "Todos (Almacén)");
     
     const chk = document.getElementById("chkSoloAlmacen");
-    const sel = document.getElementById("condicionAlmacenSelect");
     if (sel && chk) {
       sel.disabled = !chk.checked;
     }
