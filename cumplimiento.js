@@ -49,8 +49,39 @@
   const FECHA_COL = "FECHA ENTREGA ESPERADA";
   const DEMORA_COL = "DIAS DE DEMORA";
 
-  const CONDICION_ALMACEN_CANDIDATES = ["CONDICION ALMACEN", "CONDICIÒN ALMACEN", "CONDICIÓN ALMACEN", "SOLO ALMACEN"];
+  // Son DOS columnas distintas en el CSV real (confirmado por el usuario):
+  //  - "Condicion Almacen": texto descriptivo, ej. "Reposición directa" (alimenta el multi-select)
+  //  - "Solo Almacen": bandera 1 / vacío (alimenta el checkbox cuando no hay condición específica elegida)
+  const CONDICION_ALMACEN_CANDIDATES = ["CONDICION ALMACEN", "CONDICION DE ALMACEN"];
+  const SOLO_ALMACEN_CANDIDATES = ["SOLO ALMACEN"];
   let CONDICION_ALMACEN_COL = null;
+  let SOLO_ALMACEN_COL = null;
+
+  // Normaliza un texto: sin acentos, mayúsculas, espacios múltiples colapsados y sin espacios en los bordes.
+  // Se usa para poder matchear el header del CSV aunque venga con otra codificación de acentos,
+  // otro casing, o espacios extra (causas típicas de que "CONDICION ALMACEN" no matcheara nunca).
+  function normalizeHeader(s) {
+    return (s || "")
+      .toString()
+      .trim()
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ");
+  }
+
+  // Busca en `headers` (los headers reales del CSV) el primero que matchee, de forma normalizada,
+  // con alguno de los `candidates`. Devuelve el header ORIGINAL (tal cual viene en el CSV), porque
+  // las filas de `data` están indexadas con ese header original, no con el normalizado.
+  function findColumn(headers, candidates) {
+    const normalizedHeaders = headers.map(h => ({ original: h, norm: normalizeHeader(h) }));
+    for (const cand of candidates) {
+      const normCand = normalizeHeader(cand);
+      const match = normalizedHeaders.find(h => h.norm === normCand);
+      if (match) return match.original;
+    }
+    return null;
+  }
 
   function avgDelay(rows) {
     let s = 0, c = 0;
@@ -371,11 +402,16 @@
     
     // LÓGICA EN CASCADA COMPLETA
     const chkSoloAlmacen = document.getElementById("chkSoloAlmacen");
-    if (chkSoloAlmacen && chkSoloAlmacen.checked && CONDICION_ALMACEN_COL) {
+    if (chkSoloAlmacen && chkSoloAlmacen.checked) {
       const conds = getSelValues("condicionAlmacenSelect");
-      if (conds.length) {
+      if (conds.length && CONDICION_ALMACEN_COL) {
+        // Se eligieron condiciones específicas (ej. "Reposición directa") -> filtramos por esas
         rows = rows.filter(r => conds.includes(clean(r[CONDICION_ALMACEN_COL])));
-      } else {
+      } else if (SOLO_ALMACEN_COL) {
+        // Sin condición específica -> usamos la bandera "Solo Almacen" (1 = sí, vacío = no)
+        rows = rows.filter(r => clean(r[SOLO_ALMACEN_COL]) === "1");
+      } else if (CONDICION_ALMACEN_COL) {
+        // Fallback por si no existe la columna bandera: cualquier fila con condición no vacía
         rows = rows.filter(r => clean(r[CONDICION_ALMACEN_COL]) !== "");
       }
     }
@@ -965,7 +1001,15 @@
         CLASIF2_COL = CLASIF2_CANDIDATES.find(c => headers.includes(c)) || null;
         GCOC_COL = GCOC_CANDIDATES.find(c => headers.includes(c)) || null;
         CENTRO_COL = CENTRO_CANDIDATES.find(c => headers.includes(c)) || null;
-        CONDICION_ALMACEN_COL = CONDICION_ALMACEN_CANDIDATES.find(c => headers.includes(c)) || null;
+        CONDICION_ALMACEN_COL = findColumn(headers, CONDICION_ALMACEN_CANDIDATES);
+        SOLO_ALMACEN_COL = findColumn(headers, SOLO_ALMACEN_CANDIDATES);
+        if (!CONDICION_ALMACEN_COL || !SOLO_ALMACEN_COL) {
+          console.warn(
+            '[VER SOLO ALMACÉN] No se encontró alguna columna en el CSV.',
+            'Condicion Almacen:', CONDICION_ALMACEN_COL, '| Solo Almacen:', SOLO_ALMACEN_COL,
+            '\nHeaders disponibles:', headers
+          );
+        }
 
         const required = [FECHA_COL, AT_COL, FT_COL, NO_COL];
         const missing = required.filter(c => !headers.includes(c));
@@ -979,7 +1023,7 @@
         setText("cumpl_clasif2Hint", CLASIF2_COL ? `Columna: ${CLASIF2_COL}` : "Columna: (no encontrada)");
         setText("cumpl_gcocHint", GCOC_COL ? `Columna: ${GCOC_COL}` : "Columna: (no encontrada)");
         setText("centroHint", CENTRO_COL ? `Columna: ${CENTRO_COL}` : "Columna: (no encontrada)");
-        setText("condicionAlmacenHint", CONDICION_ALMACEN_COL ? `Columna: ${CONDICION_ALMACEN_COL}` : "Columna: (no encontrada)");
+        setText("condicionAlmacenHint", CONDICION_ALMACEN_COL ? `Columna: ${CONDICION_ALMACEN_COL} | Solo Almacén: ${SOLO_ALMACEN_COL || "(no encontrada)"}` : "Columna: (no encontrada)");
 
         // Renderizado inicial en cascada de los selectores select
         renderClientes(); 
@@ -1057,3 +1101,4 @@
       .catch(err => { console.error(err); showError("Error: " + (err?.message || err)); })
       .finally(() => { const loader = document.getElementById("cumpl_loader"); if (loader) loader.style.display = "none"; });
   };
+})();
