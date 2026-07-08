@@ -49,6 +49,9 @@
   const FECHA_COL = "FECHA ENTREGA ESPERADA";
   const DEMORA_COL = "DIAS DE DEMORA";
 
+  const CONDICION_ALMACEN_CANDIDATES = ["CONDICION ALMACEN", "CONDICIÒN ALMACEN", "CONDICIÓN ALMACEN", "SOLO ALMACEN"];
+  let CONDICION_ALMACEN_COL = null;
+
   function avgDelay(rows) {
     let s = 0, c = 0;
     for (const r of rows) {
