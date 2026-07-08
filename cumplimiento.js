@@ -49,40 +49,6 @@
   const FECHA_COL = "FECHA ENTREGA ESPERADA";
   const DEMORA_COL = "DIAS DE DEMORA";
 
-  // Son DOS columnas distintas en el CSV real (confirmado por el usuario):
-  //  - "Condicion Almacen": texto descriptivo, ej. "Reposición directa" (alimenta el multi-select)
-  //  - "Solo Almacen": bandera 1 / vacío (alimenta el checkbox cuando no hay condición específica elegida)
-  const CONDICION_ALMACEN_CANDIDATES = ["CONDICION ALMACEN", "CONDICION DE ALMACEN"];
-  const SOLO_ALMACEN_CANDIDATES = ["SOLO ALMACEN"];
-  let CONDICION_ALMACEN_COL = null;
-  let SOLO_ALMACEN_COL = null;
-
-  // Normaliza un texto: sin acentos, mayúsculas, espacios múltiples colapsados y sin espacios en los bordes.
-  // Se usa para poder matchear el header del CSV aunque venga con otra codificación de acentos,
-  // otro casing, o espacios extra (causas típicas de que "CONDICION ALMACEN" no matcheara nunca).
-  function normalizeHeader(s) {
-    return (s || "")
-      .toString()
-      .trim()
-      .toUpperCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, " ");
-  }
-
-  // Busca en `headers` (los headers reales del CSV) el primero que matchee, de forma normalizada,
-  // con alguno de los `candidates`. Devuelve el header ORIGINAL (tal cual viene en el CSV), porque
-  // las filas de `data` están indexadas con ese header original, no con el normalizado.
-  function findColumn(headers, candidates) {
-    const normalizedHeaders = headers.map(h => ({ original: h, norm: normalizeHeader(h) }));
-    for (const cand of candidates) {
-      const normCand = normalizeHeader(cand);
-      const match = normalizedHeaders.find(h => h.norm === normCand);
-      if (match) return match.original;
-    }
-    return null;
-  }
-
   function avgDelay(rows) {
     let s = 0, c = 0;
     for (const r of rows) {
@@ -97,9 +63,9 @@
   const GCOC_CANDIDATES = ["GRUPO DE COMPRAS OC", "GRUPO DE COMPRAS_OC", "GRUPO DE COMPRA OC"];
   const CENTRO_CANDIDATES = ["CENTRO"];
 
-  const AT_COL = "ENTREGADOS AT";
-  const FT_COL = "ENTREGADOS FT";
-  const NO_COL = "NO ENTREGADOS";
+  let AT_COL = "ENTREGADOS AT";
+  let FT_COL = "ENTREGADOS FT";
+  let NO_COL = "NO ENTREGADOS";
 
   /* ============================
      COLORES (match KPIs)
@@ -124,6 +90,8 @@
   let CLASIF2_COL = null;
   let GCOC_COL = null;
   let CENTRO_COL = null;
+
+  let useFinalColumns = false;
 
   let chartMes = null;
   let chartTendencia = null;
@@ -212,7 +180,7 @@
   }
 
   /* ============================
-     CSV parser
+     CSV parser (quotes safe)
   ============================ */
   function parseDelimited(text, delimiter = ";") {
     const rows = [];
@@ -261,6 +229,7 @@
     if (!sel) return;
 
     const prevSet = new Set([...sel.selectedOptions].map(o => o.value));
+
     sel.innerHTML = "";
 
     const optAll = document.createElement("option");
@@ -400,22 +369,6 @@
     const cents = getSelValues("centroSelect");
     if (cents.length && CENTRO_COL) rows = rows.filter(r => cents.includes(clean(r[CENTRO_COL])));
     
-    // LÓGICA EN CASCADA COMPLETA
-    const chkSoloAlmacen = document.getElementById("chkSoloAlmacen");
-    if (chkSoloAlmacen && chkSoloAlmacen.checked) {
-      const conds = getSelValues("condicionAlmacenSelect");
-      if (conds.length && CONDICION_ALMACEN_COL) {
-        // Se eligieron condiciones específicas (ej. "Reposición directa") -> filtramos por esas
-        rows = rows.filter(r => conds.includes(clean(r[CONDICION_ALMACEN_COL])));
-      } else if (SOLO_ALMACEN_COL) {
-        // Sin condición específica -> usamos la bandera "Solo Almacen" (1 = sí, vacío = no)
-        rows = rows.filter(r => clean(r[SOLO_ALMACEN_COL]) === "1");
-      } else if (CONDICION_ALMACEN_COL) {
-        // Fallback por si no existe la columna bandera: cualquier fila con condición no vacía
-        rows = rows.filter(r => clean(r[CONDICION_ALMACEN_COL]) !== "");
-      }
-    }
-    
     return rows;
   }
 
@@ -448,29 +401,6 @@
     const sel = document.getElementById("centroSelect");
     if (sel) sel.disabled = false;
     fillSelect("centroSelect", vals, "Todos");
-  }
-
- function renderCondicionAlmacen() {
-    const hint = document.getElementById("condicionAlmacenHint");
-    if (!CONDICION_ALMACEN_COL) {
-      if (hint) hint.textContent = "Columna: (no encontrada)";
-      const sel = document.getElementById("condicionAlmacenSelect");
-      if (sel) { sel.disabled = true; sel.innerHTML = `<option value="">Todos</option>`; }
-      return;
-    }
-    if (hint) hint.textContent = `Columna: ${CONDICION_ALMACEN_COL}`;
-    
-    // 🌟 OPTIMIZACIÓN: Extraemos los valores basados en las filas que ya pasaron por el filtro de obra activo
-    const filasBase = rowsByClienteBase();
-    const vals = uniqSorted(filasBase.map(r => r[CONDICION_ALMACEN_COL]));
-    
-    const sel = document.getElementById("condicionAlmacenSelect");
-    fillSelect("condicionAlmacenSelect", vals, "Todos (Almacén)");
-    
-    const chk = document.getElementById("chkSoloAlmacen");
-    if (sel && chk) {
-      sel.disabled = !chk.checked;
-    }
   }
 
   function renderClasif2(rowsBase) {
@@ -550,11 +480,12 @@
     }
 
     updateMesTitleFromSelect();
+
     return months;
   }
 
   /* ============================
-     KPI CALCS
+     KPI CALCS 100% ESTRICTOS
   ============================ */
   function calcTotals(rows) {
     let at = 0, ft = 0, no = 0;
@@ -563,7 +494,7 @@
       ft += toNumber(r[FT_COL]);
       no += toNumber(r[NO_COL]);
     }
-    const total = at + ft + no;
+    let total = at + ft + no;
     return { at, ft, no, total };
   }
 
@@ -577,7 +508,8 @@
       no += toNumber(r[NO_COL]);
     }
 
-    const total = at + ft + no;
+    let total = at + ft + no;
+
     const pctAT = total ? at / total : NaN;
     const pctFT = total ? ft / total : NaN;
     const pctNO = total ? no / total : NaN;
@@ -595,6 +527,7 @@
     const pctNO = t.total ? t.no / t.total : NaN;
 
     setText("cumpl_kpiTotal", fmtInt(t.total));
+
     setText("cumpl_kpiATpct", fmtPct01(pctAT));
     setText("cumpl_kpiATqty", `Cantidad: ${fmtInt(t.at)}`);
     const elAT = document.getElementById("cumpl_kpiATpct");
@@ -607,6 +540,7 @@
 
     setText("cumpl_kpiFTpct", fmtPct01(pctFT));
     setText("cumpl_kpiFTqty", `Cantidad: ${fmtInt(t.ft)}`);
+
     setText("cumpl_kpiNOpct", fmtPct01(pctNO));
     setText("cumpl_kpiNOqty", `Cantidad: ${fmtInt(t.no)}`);
   }
@@ -620,6 +554,7 @@
       const pctNO = t.total ? t.no / t.total : NaN;
 
       setText("cumpl_kpiTotalMes", fmtInt(t.total));
+
       setText("cumpl_kpiATmes", fmtPct01(pctAT));
       const elATmes = document.getElementById("cumpl_kpiATmes");
       if (elATmes) elATmes.style.color = (isFinite(pctAT) && pctAT >= 0.78) ? "#16a34a" : "#ef4444";
@@ -652,6 +587,7 @@
     const prev = prevMes ? calcMonthTotals(rows, prevMes) : null;
 
     setText("cumpl_kpiTotalMes", fmtInt(cur.total));
+
     setText("cumpl_kpiATmes", fmtPct01(cur.pctAT));
     const elATmes = document.getElementById("cumpl_kpiATmes");
     if (elATmes) elATmes.style.color = (isFinite(cur.pctAT) && cur.pctAT >= 0.78) ? "#16a34a" : "#ef4444";
@@ -680,9 +616,14 @@
     const dFT = deltaInfo(cur.pctFT, prev.pctFT);
     const dNO = deltaInfo(cur.pctNO, prev.pctNO);
 
-    let clsAT = "delta-good"; if (dAT.diff < 0) clsAT = "delta-bad";
-    let clsFT = "delta-bad"; if (dFT.diff < 0) clsFT = "delta-good";
-    let clsNO = "delta-good"; if (dNO.diff > 0) clsNO = "delta-bad";
+    let clsAT = "delta-good";
+    if (dAT.diff < 0) clsAT = "delta-bad";
+
+    let clsFT = "delta-bad";
+    if (dFT.diff < 0) clsFT = "delta-good";
+
+    let clsNO = "delta-good";
+    if (dNO.diff > 0) clsNO = "delta-bad";
 
     setDelta(atSub, `Cant: ${fmtInt(cur.at)} · ${dAT.text}`, clsAT);
     setDelta(ftSub, `Cant: ${fmtInt(cur.ft)} · ${dFT.text}`, clsFT);
@@ -690,12 +631,12 @@
   }
 
   /* ============================
-     CHART DEFAULTS
+     CHART DEFAULTS (ECharts)
   ============================ */
   function applyChartDefaults() {}
 
   /* ============================
-     CHART 1: Bars
+     CHART 1: 100% stacked bar + línea ESTRICTO
   ============================ */
   function buildChartMes(rows) {
     const agg = new Map();
@@ -711,10 +652,14 @@
       if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0, comp: 0, demSum: 0, demCnt: 0 });
       const c = agg.get(mk);
 
-      c.at += toNumber(r[AT_COL]);
-      c.ft += toNumber(r[FT_COL]);
-      c.no += toNumber(r[NO_COL]);
-      c.comp += toNumber(r["COMPROMETIDOS"]) || (toNumber(r[AT_COL]) + toNumber(r[FT_COL]) + toNumber(r[NO_COL]));
+      let rAt = toNumber(r[AT_COL]);
+      let rFt = toNumber(r[FT_COL]);
+      let rNo = toNumber(r[NO_COL]);
+
+      c.at += rAt;
+      c.ft += rFt;
+      c.no += rNo;
+      c.comp += toNumber(r["COMPROMETIDOS"]) || (rAt + rFt + rNo);
 
       const dem = toNumAny(r[DEMORA_COL]);
       if (!isNaN(dem)) { c.demSum += dem; c.demCnt += 1; }
@@ -750,6 +695,7 @@
     if (!el || !window.echarts) return;
 
     if (!chartMes) chartMes = echarts.init(el, null, { renderer: "canvas" });
+
     const lineSegments = [];
 
     if (months.length === 1) {
@@ -758,347 +704,832 @@
       lineSegments.push({
         yAxis: hActual,
         label: {
-          show: true, formatter: `Obj ${hActual}%`, fontWeight: 800, fontSize: 11, position: "end",
-          backgroundColor: '#374151', color: '#fff', padding: [4, 6], borderRadius: 4
+          show: true,
+          formatter: `Obj ${hActual}%`,
+          fontWeight: 800,
+          fontSize: 11,
+          position: "end",
+          backgroundColor: '#374151',
+          color: '#fff',
+          padding: [4, 6],
+          borderRadius: 4
         }
       });
     } else {
       for (let i = 0; i < months.length - 1; i++) {
         const anoActual = parseInt(months[i].substring(0, 4), 10);
         const hActual = (anoActual >= 2026) ? 78 : 75;
+        
         const isLastSegment = (i === months.length - 2);
+
         const anoSig = parseInt(months[i + 1].substring(0, 4), 10);
         const hSig = (anoSig >= 2026) ? 78 : 75;
+
         const showLabelOnHorizontal = isLastSegment && (hActual === hSig);
 
         lineSegments.push([
-          { xAxis: i, yAxis: hActual, label: showLabelOnHorizontal ? {
-              show: true, formatter: `Obj ${hSig}%`, fontWeight: 800, fontSize: 11, position: "end",
-              offset: [35, 0], backgroundColor: '#374151', color: '#fff', padding: [4, 6], borderRadius: 4
+          { 
+            xAxis: i, 
+            yAxis: hActual, 
+            label: showLabelOnHorizontal ? {
+              show: true,
+              formatter: `Obj ${hSig}%`,
+              fontWeight: 800,
+              fontSize: 11,
+              position: "end",
+              offset: [35, 0],
+              backgroundColor: '#374151',
+              color: '#fff',
+              padding: [4, 6],
+              borderRadius: 4
             } : { show: false }
           },
-          { xAxis: i + 1, yAxis: hActual }
+          { 
+            xAxis: i + 1, 
+            yAxis: hActual
+          }
         ]);
 
         if (hActual !== hSig) {
           const showLabelOnVertical = isLastSegment;
+          
           lineSegments.push([
-            { xAxis: i + 1, yAxis: hActual, label: showLabelOnVertical ? {
-                show: true, formatter: `Obj ${hSig}%`, fontWeight: 800, fontSize: 11, position: "end",
-                offset: [35, 0], backgroundColor: '#374151', color: '#fff', padding: [4, 6], borderRadius: 4
+            { 
+              xAxis: i + 1, 
+              yAxis: hActual, 
+              label: showLabelOnVertical ? {
+                show: true,
+                formatter: `Obj ${hSig}%`,
+                fontWeight: 800,
+                fontSize: 11,
+                position: "end",
+                offset: [35, 0],
+                backgroundColor: '#374151',
+                color: '#fff',
+                padding: [4, 6],
+                borderRadius: 4
               } : { show: false }
             },
-            { xAxis: i + 1, yAxis: hSig }
+            { 
+              xAxis: i + 1, 
+              yAxis: hSig
+            }
           ]);
         }
       }
     }
 
     const option = {
-      animation: true, grid: { left: 56, right: 70, top: 40, bottom: 62 },
+      animation: true,
+      animationDuration: 800,
+      animationDurationUpdate: 600,
+      animationEasing: "cubicOut",
+      animationEasingUpdate: "cubicOut",
+      grid: { left: 56, right: 70, top: 40, bottom: 62 },
       tooltip: {
-        trigger: "axis", axisPointer: { type: "shadow" }, confine: true,
-        backgroundColor: "transparent", borderColor: "transparent", borderWidth: 0, padding: 0,
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+        confine: true,
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        shadowColor: "transparent",
+        shadowBlur: 0,
+        borderWidth: 0,
+        padding: 0,
         formatter: (params) => {
           const axis = params?.[0]?.axisValue ?? "";
           const byName = Object.fromEntries(params.map(p => [p.seriesName, p]));
-          const at = byName["Entregados AT"]; const ft = byName["Entregados FT"];
-          const ne = byName["No entregados"]; const acum = byName["%AT Acumulado"];
+          const at = byName["Entregados AT"];
+          const ft = byName["Entregados FT"];
+          const ne = byName["No entregados"];
+          const acum = byName["%AT Acumulado"];
           const dem = byName["Promedio días de demora"];
 
-          let html = `<div style="font-family: var(--font-body), sans-serif; padding: 10px 14px; min-width: 190px; background: #ffffff; border-radius: 8px; border: 1.5px solid var(--border-light); color: var(--text-main);">
-                        <div style="font-family: var(--font-main), sans-serif; font-weight: 800; font-size: 0.9rem; margin-bottom: 8px; border-bottom: 1.5px solid var(--border-light); padding-bottom: 6px;">📅 ${axis}</div>
-                        <div style="display: flex; flex-direction: column; gap: 6px;">`;
-          if (at) html += `<div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem;"><span>A Tiempo</span><span style="font-weight: 800;">${fmtInt(qAT[at.dataIndex])} (${_fmtNum1(at.value)}%)</span></div>`;
-          if (ft) html += `<div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem;"><span>Fuera Tiempo</span><span style="font-weight: 800;">${fmtInt(qFT[ft.dataIndex])} (${_fmtNum1(ft.value)}%)</span></div>`;
-          if (ne) html += `<div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem;"><span style="color:#ef4444;">No Entregados</span><span style="font-weight: 800; color:#ef4444;">${fmtInt(qNO[ne.dataIndex])} (${_fmtNum1(ne.value)}%)</span></div>`;
-          if (acum) html += `<div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; border-top: 1.5px solid var(--border-light); padding-top: 6px;"><span style="color:#7c3aed;">% AT Acum.</span><span style="font-weight: 800; color:#7c3aed;">${_fmtNum1(acum.value)}%</span></div>`;
-          if (dem && dem.value != null && !isNaN(dem.value)) html += `<div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; border-top: 1.5px solid var(--border-light); padding-top: 6px;"><span style="color:#3b82f6;">Demora Prom.</span><span style="font-weight: 800; color:#2563eb;">${Math.round(dem.value)} días</span></div>`;
-          html += `</div></div>`; return html;
+          let html = `
+            <div style="font-family: var(--font-body), sans-serif; padding: 10px 14px; min-width: 190px; background: #ffffff; border-radius: 8px; box-shadow: var(--shadow-xl); border: 1.5px solid var(--border-light); color: var(--text-main);">
+              <div style="font-family: var(--font-main), sans-serif; font-weight: 800; font-size: 0.9rem; margin-bottom: 8px; border-bottom: 1.5px solid var(--border-light); padding-bottom: 6px; color: var(--text-main); letter-spacing: 0.02em;">
+                📅 ${axis}
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+          `;
+
+          if (at) {
+            html += `
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; gap: 15px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-muted);">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+                  A Tiempo
+                </span>
+                <span style="font-weight: 800; color: var(--text-main);">${fmtInt(qAT[at.dataIndex])} <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">(${_fmtNum1(at.value)}%)</span></span>
+              </div>
+            `;
+          }
+          if (ft) {
+            html += `
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; gap: 15px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-muted);">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></span>
+                  Fuera Tiempo
+                </span>
+                <span style="font-weight: 800; color: var(--text-main);">${fmtInt(qFT[ft.dataIndex])} <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">(${_fmtNum1(ft.value)}%)</span></span>
+              </div>
+            `;
+          }
+          if (ne) {
+            html += `
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; gap: 15px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-muted);">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span>
+                  No Entregados
+                </span>
+                <span style="font-weight: 800; color: #ef4444;">${fmtInt(qNO[ne.dataIndex])} <span style="font-size: 0.75rem; color: #ef4444; font-weight: 600;">(${_fmtNum1(ne.value)}%)</span></span>
+              </div>
+            `;
+          }
+          if (acum) {
+            html += `
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; border-top: 1.5px solid var(--border-light); padding-top: 6px; margin-top: 2px; gap: 15px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-muted);">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #7c3aed;"></span>
+                  % AT Acum.
+                </span>
+                <span style="font-weight: 800; color: #7c3aed;">${_fmtNum1(acum.value)}%</span>
+              </div>
+            `;
+          }
+          if (dem && dem.value != null && !isNaN(dem.value)) {
+            html += `
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; border-top: 1.5px solid var(--border-light); padding-top: 6px; margin-top: 2px; gap: 15px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-muted);">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span>
+                  Demora Prom.
+                </span>
+                <span style="font-weight: 800; color: #2563eb;">${Math.round(dem.value)} días</span>
+              </div>
+            `;
+          }
+
+          html += `
+              </div>
+            </div>
+          `;
+          return html;
         }
       },
-      legend: { bottom: 12, left: "center", textStyle: { fontWeight: 800 } },
-      xAxis: { type: "category", data: months, axisLabel: { fontWeight: 700 } },
+      legend: {
+        bottom: 12,
+        left: "center",
+        itemWidth: 14,
+        itemHeight: 10,
+        textStyle: { fontWeight: 800 }
+      },
+      xAxis: {
+        type: "category",
+        data: months,
+        axisTick: { alignWithLabel: true },
+        axisLabel: { fontWeight: 700 }
+      },
       yAxis: [
-        { type: "value", min: 0, max: 100, axisLabel: { formatter: "{value}%" }, splitLine: { lineStyle: { color: "rgba(15,23,42,0.10)" } } },
-        { type: "value", name: "Días de demora", position: "right", splitLine: { show: false } }
+        {
+          type: "value",
+          min: 0,
+          max: 100,
+          axisLabel: { formatter: "{value}%" },
+          splitLine: { lineStyle: { color: "rgba(15,23,42,0.10)" } }
+        },
+        {
+          type: "value",
+          name: "Días de demora",
+          position: "right",
+          axisLabel: { fontWeight: 700 },
+          splitLine: { show: false },
+          boundaryGap: [0, '25%']
+        }
       ],
       series: [
         {
-          name: "Entregados AT", type: "bar", stack: "pct",
+          name: "Entregados AT",
+          type: "bar",
+          stack: "pct",
           data: pAT.map(v => {
             const val = +(+v).toFixed(4);
-            return (val < 78) ? { value: val, itemStyle: { borderColor: '#dc2626', borderWidth: 2 }} : val;
+            if (val < 78) {
+              return {
+                value: val,
+                itemStyle: {
+                  borderColor: '#dc2626',
+                  borderWidth: 2,
+                  borderType: 'solid',
+                  borderRadius: [6, 6, 0, 0]
+                }
+              };
+            }
+            return val;
           }),
           barMaxWidth: 52,
           itemStyle: {
-            color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: "#10b981" }, { offset: 1, color: "#047857" }] },
+            color: {
+              type: "linear",
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: "#10b981" },
+                { offset: 1, color: "#047857" }
+              ]
+            },
             borderRadius: [6, 6, 0, 0]
           },
           label: {
-            show: true, position: "insideBottom", distance: 10, fontWeight: 900, fontSize: 11,
+            show: true,
+            position: "insideBottom", 
+            distance: 10,
+            fontWeight: 900,
+            fontSize: 11,
+            lineHeight: 12,
             formatter: (p) => {
-              const q = qAT[p.dataIndex] || 0; const pct = Math.round(+p.value || 0);
-              if (!q || pct < 6) return "";
-              return (pct < 78) ? `{warn|${fmtInt(q)}\n⚠ (${pct}%)}` : `${fmtInt(q)}\n(${pct}%)`;
+              const i = p.dataIndex;
+              const pct = +p.value || 0;
+              const q = (qAT)[i] || 0;
+              if (!q) return "";
+              if (pct < 6) return "";
+              const pctRound = Math.round(pct);
+              if (pct < 78) return `{warn|${fmtInt(q)}\n⚠ (${pctRound}%)}`;
+              return `${fmtInt(q)}\n(${pctRound}%)`;
             },
-            rich: { warn: { fontWeight: 950, color: "#7f1d1d", backgroundColor: "rgba(254, 202, 202, 0.9)", padding: [2, 4], borderRadius: 4 }}
-          }
+            rich: {
+              warn: {
+                fontWeight: 950,
+                color: "#7f1d1d",
+                backgroundColor: "rgba(254, 202, 202, 0.9)",
+                borderColor: "#b91c1c",
+                borderWidth: 1.5,
+                borderRadius: 4,
+                padding: [2, 4],
+                fontSize: 11,
+                lineHeight: 14,
+                align: 'center'
+              }
+            },
+            color: "#ffffff",
+            backgroundColor: "rgba(0,0,0,0.15)",
+            borderRadius: 4,
+            padding: [2, 4]
+          },
+          labelLayout: { hideOverlap: true },
+          emphasis: { disabled: true },
+          markLine: {
+            silent: true,
+            symbol: ["none", "none"],
+            lineStyle: { type: "dashed", width: 2, color: "#374151" },
+            clip: false,
+            data: lineSegments
+          },
+          z: 1,
+          zlevel: 0
         },
         {
-          name: "Entregados FT", type: "bar", stack: "pct", data: pFT.map(v => +(+v).toFixed(4)), barMaxWidth: 52,
-          itemStyle: { color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: "#f59e0b" }, { offset: 1, color: "#d97706" }] }},
-          label: {
-            show: true, position: "insideTop", distance: 4, color: "#111", fontWeight: 955, fontSize: 11,
-            formatter: (p) => {
-              const q = qFT[p.dataIndex] || 0; const pct = Math.round(+p.data || 0);
-              return (!q || pct < 8) ? "" : `${fmtInt(q)}\n(${pct}%)`;
+          name: "Entregados FT",
+          type: "bar",
+          stack: "pct",
+          data: pFT.map(v => +(+v).toFixed(4)),
+          barMaxWidth: 52,
+          itemStyle: {
+            color: {
+              type: "linear",
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: "#f59e0b" },
+                { offset: 1, color: "#d97706" }
+              ]
             }
-          }
+          },
+          label: {
+            show: true,
+            position: "insideTop", 
+            distance: 4,
+            color: "#111",
+            fontWeight: 950,
+            fontSize: 11,
+            lineHeight: 12,
+            formatter: (p) => {
+              const i = p.dataIndex;
+              const pct = +p.data || 0;
+              const q = (qFT)[i] || 0;
+              if (!q) return "";
+              if (pct < 8) return ""; 
+              return `${fmtInt(q)}\n(${Math.round(pct)}%)`;
+            }
+          },
+          labelLayout: { hideOverlap: true },
+          emphasis: { disabled: true },
+          z: 1,
+          zlevel: 0
         },
         {
-          name: "No entregados", type: "bar", stack: "pct", data: pNO.map(v => +(+v).toFixed(4)), barMaxWidth: 52,
-          itemStyle: { color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: "#f87171" }, { offset: 1, color: "#ef4444" }] }},
+          name: "No entregados",
+          type: "bar",
+          stack: "pct",
+          data: pNO.map(v => +(+v).toFixed(4)),
+          barMaxWidth: 52,
+          itemStyle: {
+            color: {
+              type: "linear",
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: "#f87171" },
+                { offset: 1, color: "#ef4444" }
+              ]
+            }
+          },
           label: {
-            show: true, position: "top", distance: 2, color: "#fff", fontWeight: 900, fontSize: 11,
-            backgroundColor: "rgba(239, 68, 68, 0.9)", padding: [2, 4], borderRadius: 3,
-            formatter: (p) => { const q = qNO[p.dataIndex] || 0; return !q ? "" : `${fmtInt(q)} (${Math.round(+p.data)}%)`; }
-          }
+            show: true,
+            position: "top", 
+            distance: 2,
+            color: "#fff",
+            fontWeight: 900,
+            fontSize: 11,
+            lineHeight: 12,
+            backgroundColor: "rgba(239, 68, 68, 0.9)", 
+            padding: [2, 4],
+            borderRadius: 3,
+            formatter: (p) => {
+              const i = p.dataIndex;
+              const pct = +p.data || 0;
+              const q = (qNO)[i] || 0;
+              if (!q) return "";
+              return `${fmtInt(q)} (${Math.round(pct)}%)`;
+            }
+          },
+          labelLayout: { hideOverlap: true },
+          emphasis: { disabled: true },
+          z: 1,
+          zlevel: 0
         },
         {
-          name: "%AT Acumulado", type: "line", data: pAT_acum.map(v => +(+v).toFixed(2)), symbol: "circle", symbolSize: 1,
-          lineStyle: { width: 3.5, color: "#7c3aed" }, itemStyle: { color: "#7c3aed" },
+          name: "%AT Acumulado",
+          type: "line",
+          data: pAT_acum.map(v => +(+v).toFixed(2)),
+          showSymbol: true,         
+          symbol: "circle",         
+          symbolSize: 1,            
+          showAllSymbol: true,      
+          lineStyle: { 
+            width: 3.5,         
+            type: "solid",      
+            color: "#7c3aed"    
+          },
+          itemStyle: { color: "#7c3aed" },
           label: {
-            show: true, position: "bottom", distance: 6, backgroundColor: "rgba(255, 255, 255, 0.85)", padding: [2, 4], borderRadius: 3,
-            formatter: (p) => (p.data == null || isNaN(p.data)) ? "" : p.data.toFixed(2).replace(".", ",") + "%",
+            show: true,             
+            position: "bottom",   
+            distance: 6,          
+            formatter: (p) => {
+              const val = +p.data;
+              if (val == null || isNaN(val)) return "";
+              return val.toFixed(2).replace(".", ",") + "%";
+            },
+            backgroundColor: "rgba(255, 255, 255, 0.85)", 
+            padding: [2, 4],                             
+            borderRadius: 3,                             
+            borderColor: "rgba(124, 58, 237, 0.25)",      
+            borderWidth: 1,
             textStyle: { fontWeight: 850, color: "#6d28d9", fontSize: 10 }
-          }
+          },
+          emphasis: {
+            disabled: false,
+            scale: false, 
+            label: {
+              show: true, 
+              position: "bottom",
+              formatter: (p) => {
+                const val = +p.data;
+                if (val == null || isNaN(val)) return "";
+                return val.toFixed(2).replace(".", ",") + "%";
+              },
+              textStyle: { fontWeight: 850, color: "#6d28d9", fontSize: 10 }
+            }
+          },
+          z: 6
         },
         {
-          name: "Promedio días de demora", type: "line", yAxisIndex: 1, data: avgDem, symbol: "circle", symbolSize: 0, showSymbol: true, connectNulls: true,
-          lineStyle: { width: 3, color: COLORS.blue }, itemStyle: { color: COLORS.blue },
+          name: "Promedio días de demora",
+          type: "line",
+          yAxisIndex: 1,
+          data: avgDem,
+          symbol: "circle",
+          symbolSize: 0,          
+          showSymbol: true,       
+          connectNulls: true,
+          lineStyle: { width: 3, color: COLORS.blue },
+          itemStyle: { color: COLORS.blue },
           label: {
-            show: true, position: "top", distance: 8, backgroundColor: "rgba(255,255,255,0.85)", padding: [2, 4], borderRadius: 4, fontWeight: 950,
+            show: true,
+            position: "top",      
+            distance: 8,
+            backgroundColor: "rgba(255,255,255,0.85)", 
+            padding: [2, 4],
+            borderRadius: 4,
+            fontWeight: 950,
+            color: "#0b1220",
             formatter: (p) => (p.data == null || isNaN(p.data)) ? "" : `${Math.round(p.data)} d`
           },
           markLine: {
-            silent: true, symbol: ["none", "none"], lineStyle: { type: "dashed", width: 2, color: "#374151" },
-            data: [{ yAxis: 7 }], label: { show: true, formatter: "Lím 7 d", backgroundColor: '#374151', color: '#fff', padding: [4, 6], borderRadius: 4 }
-          }
+            silent: true,
+            symbol: ["none", "none"],
+            label: {
+              show: true,
+              formatter: "Lím 7 d",
+              fontWeight: 800,
+              fontSize: 11,
+              position: "end",
+              backgroundColor: '#374151',
+              color: '#fff',
+              padding: [4, 6],
+              borderRadius: 4
+            },
+            lineStyle: { type: "dashed", width: 2, color: "#374151" },
+            data: [{ yAxis: 7 }]
+          },
+          z: 10
         }
       ]
     };
+
     chartMes.setOption(option, true);
     window.addEventListener("resize", () => chartMes && chartMes.resize(), { passive: true });
   }
 
   /* ============================
-     CHART 2: Trend
+     CHART 2: Trend lines (ECharts) ESTRICTO
   ============================ */
   function buildChartTendencia(rows) {
-    const agg = new Map(); const monthsSet = new Set();
-    for (const r of rows) {
-      const d = parseDateAny(r[FECHA_COL]); if (!d) continue;
-      const mk = monthKey(d); monthsSet.add(mk);
-      if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0 });
-      const c = agg.get(mk); c.at += toNumber(r[AT_COL]); c.ft += toNumber(r[FT_COL]); c.no += toNumber(r[NO_COL]);
-    }
-    const months = [...monthsSet].sort();
-    const pAT = months.map(m => { const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0); return t ? (c.at / t) * 100 : 0; });
-    const pFT = months.map(m => { const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0); return t ? (c.ft / t) * 100 : 0; });
-    const pNO = months.map(m => { const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0); return t ? (c.no / t) * 100 : 0; });
+    const agg = new Map();
+    const monthsSet = new Set();
 
-    const el = document.getElementById("cumpl_chartTendencia"); if (!el || !window.echarts) return;
+    for (const r of rows) {
+      const d = parseDateAny(r[FECHA_COL]);
+      if (!d) continue;
+      const mk = monthKey(d);
+      monthsSet.add(mk);
+
+      if (!agg.has(mk)) agg.set(mk, { at: 0, ft: 0, no: 0 });
+      const c = agg.get(mk);
+
+      let rAt = toNumber(r[AT_COL]);
+      let rFt = toNumber(r[FT_COL]);
+      let rNo = toNumber(r[NO_COL]);
+
+      c.at += rAt;
+      c.ft += rFt;
+      c.no += rNo;
+    }
+
+    const months = [...monthsSet].sort();
+
+    const pAT = months.map(m => {
+      const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0);
+      return t ? ((c.at ?? 0) / t) * 100 : 0;
+    });
+    const pFT = months.map(m => {
+      const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0);
+      return t ? ((c.ft ?? 0) / t) * 100 : 0;
+    });
+    const pNO = months.map(m => {
+      const c = agg.get(m); const t = (c?.at ?? 0) + (c?.ft ?? 0) + (c?.no ?? 0);
+      return t ? ((c.no ?? 0) / t) * 100 : 0;
+    });
+
+    const el = document.getElementById("cumpl_chartTendencia");
+    if (!el || !window.echarts) return;
     if (!chartTendencia) chartTendencia = echarts.init(el, null, { renderer: "canvas" });
 
     const option = {
-      animation: true, grid: { left: 56, right: 18, top: 16, bottom: 62 },
+      animation: true,
+      animationDuration: 800,
+      animationDurationUpdate: 600,
+      animationEasing: "cubicOut",
+      animationEasingUpdate: "cubicOut",
+      grid: { left: 56, right: 18, top: 16, bottom: 62 },
       tooltip: {
-        trigger: "axis", confine: true, backgroundColor: "transparent", borderWidth: 0, padding: 0,
+        trigger: "axis",
+        confine: true,
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        shadowColor: "transparent",
+        shadowBlur: 0,
+        borderWidth: 0,
+        padding: 0,
         formatter: (params) => {
-          let html = `<div style="font-family: var(--font-body), sans-serif; padding: 10px 14px; background: #ffffff; border-radius: 8px; border: 1.5px solid var(--border-light);">
-                        <div style="font-weight: 800; margin-bottom: 8px;">📅 ${params?.[0]?.axisValue ?? ""}</div>`;
-          for (const p of params) html += `<div style="font-size:0.8rem;">${p.seriesName}: <b>${_fmtNum1(p.data)}%</b></div>`;
-          html += `</div>`; return html;
+          const axis = params?.[0]?.axisValue ?? "";
+          let html = `
+            <div style="font-family: var(--font-body), sans-serif; padding: 10px 14px; min-width: 190px; background: #ffffff; border-radius: 8px; box-shadow: var(--shadow-xl); border: 1.5px solid var(--border-light); color: var(--text-main);">
+              <div style="font-family: var(--font-main), sans-serif; font-weight: 800; font-size: 0.9rem; margin-bottom: 8px; border-bottom: 1.5px solid var(--border-light); padding-bottom: 6px; color: var(--text-main); letter-spacing: 0.02em;">
+                📅 Tendencia: ${axis}
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+          `;
+          for (const p of params) {
+            const color = p.color || "#0d9488";
+            html += `
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; gap: 15px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-muted);">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${color};"></span>
+                  ${p.seriesName}
+                </span>
+                <span style="font-weight: 800; color: var(--text-main);">${_fmtNum1(p.data)}%</span>
+              </div>
+            `;
+          }
+          html += `
+              </div>
+            </div>
+          `;
+          return html;
         }
       },
-      legend: { bottom: 12, left: "center", textStyle: { fontWeight: 800 } },
+      legend: {
+        bottom: 12,
+        left: "center",
+        itemWidth: 14,
+        itemHeight: 10,
+        textStyle: { fontWeight: 800 }
+      },
       xAxis: { type: "category", data: months, axisLabel: { fontWeight: 700 } },
-      yAxis: { type: "value", min: 0, max: 100, splitLine: { lineStyle: { color: "rgba(15,23,42,0.10)" } } },
+      yAxis: {
+        type: "value",
+        min: 0,max: 100,
+        axisLabel: { formatter: "{value}%" },
+        splitLine: { lineStyle: { color: "rgba(15, 23, 42, 0.10)" } }
+      },
       series: [
         {
-          name: "A Tiempo %", type: "line", data: pAT.map(v => +(+v).toFixed(2)), symbolSize: 7,
-          lineStyle: { width: 3, color: COLORS.green }, itemStyle: { color: COLORS.green, borderColor: "#fff", borderWidth: 2 },
-          label: { show: true, formatter: (p) => (+p.data < 78) ? `{warn|⚠ ${_fmtPct(p.data)}}` : `{ok|${_fmtPct(p.data)}}`, rich: { ok: { fontWeight: 900, color: COLORS.green }, warn: { fontWeight: 950, color: "#7f1d1d", padding: [2, 4] }}}
+          name: "A Tiempo %",
+          type: "line",
+          data: pAT.map(v => +(+v).toFixed(2)),
+          symbolSize: 7,
+          lineStyle: { width: 3, color: COLORS.green },
+          itemStyle: { color: COLORS.green, borderColor: "#fff", borderWidth: 2 },
+          label: {
+            show: true,
+            position: "top",
+            formatter: (p) => {
+              const v = +p.data || 0;
+              return (v < 78) ? `{warn|⚠ ${_fmtPct(v)}}` : `{ok|${_fmtPct(v)}}`;
+            },
+            rich: {
+              ok: { fontWeight: 900, color: COLORS.green },
+              warn: { fontWeight: 950, color: "#7f1d1d", backgroundColor: "rgba(239,68,68,0.18)", borderColor: "#ef4444", borderWidth: 1, borderRadius: 4, padding: [2, 4] }
+            }
+          },
+          zlevel: 5, z: 5
         },
-        { name: "Fuera Tiempo %", type: "line", data: pFT.map(v => +(+v).toFixed(2)), symbolSize: 7, lineStyle: { width: 3, color: COLORS.amber }, itemStyle: { color: COLORS.amber }, label: { show: true, fontWeight: 900, formatter: (p) => _fmtPct(p.data) }},
-        { name: "No Entregados %", type: "line", data: pNO.map(v => +(+v).toFixed(2)), symbolSize: 7, lineStyle: { width: 3, color: COLORS.red }, itemStyle: { color: COLORS.red }, label: { show: true, fontWeight: 900, formatter: (p) => _fmtPct(p.data) }}
+        {
+          name: "Fuera Tiempo %",
+          type: "line",
+          data: pFT.map(v => +(+v).toFixed(2)),
+          symbolSize: 7,
+          lineStyle: { width: 3, color: COLORS.amber },
+          itemStyle: { color: COLORS.amber, borderColor: "#fff", borderWidth: 2 },
+          label: { show: true, position: "top", fontWeight: 900, formatter: (p) => _fmtPct(p.data) },
+          zlevel: 5, z: 5
+        },
+        {
+          name: "No Entregados %",
+          type: "line",
+          data: pNO.map(v => +(+v).toFixed(2)),
+          symbolSize: 7,
+          lineStyle: { width: 3, color: COLORS.red },
+          itemStyle: { color: COLORS.red, borderColor: "#fff", borderWidth: 2 },
+          label: { show: true, position: "top", fontWeight: 900, formatter: (p) => _fmtPct(p.data) },
+          zlevel: 5, z: 5
+        }
       ]
     };
+
     chartTendencia.setOption(option, true);
     window.addEventListener("resize", () => chartTendencia && chartTendencia.resize(), { passive: true });
   }
 
   /* ============================
-     DOWNLOAD
+     DOWNLOAD: NO ENTREGADOS
   ============================ */
-  function escapeCSV(v) { const s = (v ?? "").toString(); return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
-  function downloadCSV(filename, rows, cols) {
-    const header = cols.map(escapeCSV).join(";"); const lines = rows.map(r => cols.map(c => escapeCSV(r[c])).join(";"));
-    const csv = [header, ...lines].join("\r\n"); const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  function escapeCSV(v) {
+    const s = (v ?? "").toString();
+    if (/[;"\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
   }
-  function getNoEntregadosRows(rows) { return rows.filter(r => toNumber(r[NO_COL]) > 0); }
+
+  function downloadCSV(filename, rows, cols) {
+    const header = cols.map(escapeCSV).join(";");
+    const lines = rows.map(r => cols.map(c => escapeCSV(r[c])).join(";"));
+    const csv = [header, ...lines].join("\r\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
+  function getNoEntregadosRows(rows) {
+    return rows.filter(r => toNumber(r[NO_COL]) > 0);
+  }
 
   function clearAllFilters() {
-    const chk = document.getElementById("chkSoloAlmacen"); if (chk) chk.checked = false;
-    const selCond = document.getElementById("condicionAlmacenSelect"); if (selCond) selCond.disabled = true;
-
-    const selects = ["cumpl_clienteSelect", "cumpl_clasif2Select", "cumpl_gcocSelect", "cumpl_mesSelect", "centroSelect", "condicionAlmacenSelect"];
+    const selects = ["cumpl_clienteSelect", "cumpl_clasif2Select", "cumpl_gcocSelect", "cumpl_mesSelect", "centroSelect"];
     selects.forEach(id => {
-      const sel = document.getElementById(id); if (!sel) return;
-      [...sel.options].forEach((opt, idx) => { opt.selected = (idx === 0 || opt.value === "__ALL__" || opt.value === ""); });
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      [...sel.options].forEach((opt, idx) => {
+        opt.selected = (idx === 0 || opt.value === "__ALL__" || opt.value === "");
+      });
       enforceAllOption(sel);
     });
-    updateMesTitleFromSelect(); applyAll();
+
+    useFinalColumns = false;
+    AT_COL = "ENTREGADOS AT";
+    FT_COL = "ENTREGADOS FT";
+    NO_COL = "NO ENTREGADOS";
+    const btnAlt = document.getElementById("cumpl_btnAlternativo");
+    if (btnAlt) {
+      btnAlt.textContent = "Medir cumplimiento arriba";
+      btnAlt.classList.remove("btn-active");
+    }
+
+    updateMesTitleFromSelect();
+    applyAll();
   }
 
   /* ============================
-     APPLY ALL
+     APPLY ALL CORREGIDO (Sin renderizadores repetitivos que rompen eventos)
   ============================ */
   function applyAll() {
-    const baseCliente = rowsByClienteBase(); renderClasif2(baseCliente);
-    const baseParaGc = (() => {
-      let r = baseCliente; const c2s = getCheckedClasif2();
-      if (c2s.length && CLASIF2_COL) r = r.filter(x => c2s.includes(clean(x[CLASIF2_COL]))); return r;
-    })();
-    renderGcoc(baseParaGc);
-    const rows = filteredRowsNoMes(); const months = buildMesSelect(rows);
-    updateKPIsGeneral(rows); updateKPIsMonthly(rows, months);
-    buildChartMes(rows); buildChartTendencia(rows);
+    const rows = filteredRowsNoMes();
+    const months = buildMesSelect(rows);
+
+    updateKPIsGeneral(rows);
+    updateKPIsMonthly(rows, months);
+
+    buildChartMes(rows);
+    buildChartTendencia(rows);
   }
 
   /* ============================
-     INITIALIZATION LIFE CYCLE HOOK
+     EXPOSE DEFERRED INITIALIZATION LIFE CYCLE HOOK
   =========================== */
   window.initCumplimiento = function() {
     if (window.cumplimientoInitialized) return;
     window.cumplimientoInitialized = true;
+
     applyChartDefaults();
+
     setText("lastUpdate", (window.LAST_UPDATE || "").toString().trim() || "--/--/----");
     
     fetchWithCache(csvUrl + "?t=" + window.CACHE_BUSTER)
       .then(text => {
-        const m = parseDelimited(text, DELIM); if (!m.length || m.length < 2) { showError("El CSV está vacío."); return; }
-      /* ============================
-           DETECCIÓN Y ASIGNACIÓN DE COLUMNAS DEL CSV
-        ============================ */
+        const m = parseDelimited(text, DELIM);
+        if (!m.length || m.length < 2) {
+          showError("El CSV está vacío o no tiene filas.");
+          return;
+        }
+
         headers = m[0].map(clean);
+
         CLIENT_COL = CLIENT_CANDIDATES.find(c => headers.includes(c));
-        if (!CLIENT_COL) { showError("No encuentro columna CLIENTE."); return; }
+        if (!CLIENT_COL) {
+          showError("No encuentro columna CLIENTE. Probé: " + CLIENT_CANDIDATES.join(" / "));
+          return;
+        }
 
         CLASIF2_COL = CLASIF2_CANDIDATES.find(c => headers.includes(c)) || null;
         GCOC_COL = GCOC_CANDIDATES.find(c => headers.includes(c)) || null;
         CENTRO_COL = CENTRO_CANDIDATES.find(c => headers.includes(c)) || null;
-        CONDICION_ALMACEN_COL = findColumn(headers, CONDICION_ALMACEN_CANDIDATES);
-        SOLO_ALMACEN_COL = findColumn(headers, SOLO_ALMACEN_CANDIDATES);
-        if (!CONDICION_ALMACEN_COL || !SOLO_ALMACEN_COL) {
-          console.warn(
-            '[VER SOLO ALMACÉN] No se encontró alguna columna en el CSV.',
-            'Condicion Almacen:', CONDICION_ALMACEN_COL, '| Solo Almacen:', SOLO_ALMACEN_COL,
-            '\nHeaders disponibles:', headers
-          );
+
+        const required = [FECHA_COL, "ENTREGADOS AT", "ENTREGADOS FT", "NO ENTREGADOS"];
+        const missing = required.filter(c => !headers.includes(c));
+        if (missing.length && headers.includes("ENTREGADOS AT FINAL") === false) {
+          showError("Faltan columnas de entregas requeridas en el CSV.");
+          return;
         }
 
-        const required = [FECHA_COL, AT_COL, FT_COL, NO_COL];
-        const missing = required.filter(c => !headers.includes(c));
-        if (missing.length) { showError("Faltan columnas: " + missing.join(", ")); return; }
+        data = m.slice(1).map(row => {
+          const o = {};
+          headers.forEach((h, i) => (o[h] = clean(row[i])));
+          return o;
+        });
 
-        // Mapeo plano de datos
-        data = m.slice(1).map(row => { const o = {}; headers.forEach((h, i) => (o[h] = clean(row[i]))); return o; });
-
-        // Configuración de los textos de ayuda (hints) en pantalla
         setText("cumpl_clienteHint", `Columna cliente: ${CLIENT_COL}`);
         setText("cumpl_clasif2Hint", CLASIF2_COL ? `Columna: ${CLASIF2_COL}` : "Columna: (no encontrada)");
         setText("cumpl_gcocHint", GCOC_COL ? `Columna: ${GCOC_COL}` : "Columna: (no encontrada)");
         setText("centroHint", CENTRO_COL ? `Columna: ${CENTRO_COL}` : "Columna: (no encontrada)");
-        setText("condicionAlmacenHint", CONDICION_ALMACEN_COL ? `Columna: ${CONDICION_ALMACEN_COL} | Solo Almacén: ${SOLO_ALMACEN_COL || "(no encontrada)"}` : "Columna: (no encontrada)");
 
-        // Renderizado inicial en cascada de los selectores select
-        renderClientes(); 
-        renderCentros(); 
-        renderCondicionAlmacen(); 
+        // Renderizadores iniciales (Corren una sola vez al cargar la app)
+        renderClientes();
+        renderCentros();
+        const baseCliente = rowsByClienteBase();
+        renderClasif2(baseCliente);
+        renderGcoc(baseCliente);
+        
         applyAll();
 
-        /* ============================
-           LISTENERS DE FILTROS TRADICIONALES
-        ============================ */
-        document.getElementById("cumpl_clienteSelect")?.addEventListener("change", (e) => { 
-          enforceAllOption(e.target); 
-          // Re-renderizamos las condiciones de almacén para que se adapten a la nueva obra elegida
-          renderCondicionAlmacen(); 
-          applyAll(); 
-        });
-        
-        document.getElementById("cumpl_clasif2Select")?.addEventListener("change", (e) => {
-          enforceAllOption(e.target); 
-          const gc = document.getElementById("cumpl_gcocSelect");
-          if (gc) { gc.selectedIndex = 0; enforceAllOption(gc); } 
+        const btnAlt = document.getElementById("cumpl_btnAlternativo");
+        if (btnAlt) {
+          btnAlt.addEventListener("click", () => {
+            useFinalColumns = !useFinalColumns;
+
+            if (useFinalColumns) {
+              AT_COL = "ENTREGADOS AT FINAL";
+              FT_COL = "ENTREGADOS FT FINAL";
+              NO_COL = "NO ENTREGADOS FINAL";
+              btnAlt.textContent = "Volver a cumplimiento estándar";
+              btnAlt.classList.add("btn-active");
+            } else {
+              AT_COL = "ENTREGADOS AT";
+              FT_COL = "ENTREGADOS FT";
+              NO_COL = "NO ENTREGADOS";
+              btnAlt.textContent = "Medir cumplimiento arriba";
+              btnAlt.classList.remove("btn-active");
+            }
+
+            // Calculamos directo sin refrescar las listas HTML secundarias
+            applyAll();
+          });
+        }
+
+        document.getElementById("cumpl_clienteSelect")?.addEventListener("change", (e) => {
+          enforceAllOption(e.target);
+          const baseCliente = rowsByClienteBase();
+          renderClasif2(baseCliente);
+          renderGcoc(baseCliente);
           applyAll();
         });
-        
-        document.getElementById("cumpl_gcocSelect")?.addEventListener("change", (e) => { enforceAllOption(e.target); applyAll(); });
-        document.getElementById("centroSelect")?.addEventListener("change", (e) => { enforceAllOption(e.target); applyAll(); });
-        
+
+        document.getElementById("cumpl_clasif2Select")?.addEventListener("change", (e) => {
+          enforceAllOption(e.target);
+          const baseCliente = rowsByClienteBase();
+          renderGcoc(baseCliente);
+          applyAll();
+        });
+
+        document.getElementById("cumpl_gcocSelect")?.addEventListener("change", (e) => {
+          enforceAllOption(e.target);
+          applyAll();
+        });
+
+        document.getElementById("centroSelect")?.addEventListener("change", (e) => {
+          enforceAllOption(e.target);
+          applyAll();
+        });
+
         document.getElementById("cumpl_mesSelect")?.addEventListener("change", (e) => {
-          enforceAllOption(e.target); 
+          enforceAllOption(e.target);
           updateMesTitleFromSelect();
-          const rows = filteredRowsNoMes(); 
+          const rows = filteredRowsNoMes();
           const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))].sort();
           updateKPIsMonthly(rows, months);
         });
 
-        /* ============================
-           🌟 LISTENERS DEL COMPONENTE EN CASCADA (ALMACÉN)
-        ============================ */
-        const chkSoloAlmacen = document.getElementById("chkSoloAlmacen");
-        const condicionSelect = document.getElementById("condicionAlmacenSelect");
-
-        chkSoloAlmacen?.addEventListener("change", (e) => {
-          if (condicionSelect) {
-            condicionSelect.disabled = !e.target.checked;
-            if (!e.target.checked) { 
-              condicionSelect.selectedIndex = 0; 
-              enforceAllOption(condicionSelect); 
-            } else { 
-              // Al activar la casilla, forzamos que se carguen las opciones de la obra activa
-              renderCondicionAlmacen(); 
-            }
-          }
-          applyAll();
-        });
-        
-        condicionSelect?.addEventListener("change", (e) => { 
-          enforceAllOption(e.target); 
-          applyAll(); 
-        });
-
-        /* ============================
-           BOTONES DE ACCIÓN GENERALES
-        ============================ */
         document.getElementById("cumpl_btnDownloadNO")?.addEventListener("click", () => {
-          const rowsFilt = filteredRowsByAll(); 
+          const rowsFilt = filteredRowsByAll();
           const noRows = getNoEntregadosRows(rowsFilt);
-          if (!noRows.length) { alert("No hay NO ENTREGADOS."); return; }
-          const filename = `NO_ENTREGADOS_${safeFilePart(selLabel("cumpl_clienteSelect"))}.csv`;
-          downloadCSV(filename, noRows, headers);
+
+          if (!noRows.length) {
+            alert("No hay NO ENTREGADOS para el filtro actual.");
+            return;
+          }
+
+          const cols = headers.slice();
+
+          const cliente = safeFilePart(selLabel("cumpl_clienteSelect"));
+          const c2 = "Todos"; 
+          const gc = safeFilePart(selLabel("cumpl_gcocSelect"));
+          const centro = safeFilePart(selLabel("centroSelect"));
+          const mes = safeFilePart(selLabel("cumpl_mesSelect"));
+
+          const filename = `NO_ENTREGADOS_${cliente}_${c2}_${gc}_${centro}_${mes}.csv`;
+          downloadCSV(filename, noRows, cols);
         });
 
-        document.getElementById("cumpl_btnClearFilters")?.addEventListener("click", () => { clearAllFilters(); });
+        document.getElementById("cumpl_btnClearFilters")?.addEventListener("click", () => {
+          clearAllFilters();
+        });
+
         setHTML("cumpl_msg", "");
       })
-      .catch(err => { console.error(err); showError("Error: " + (err?.message || err)); })
-      .finally(() => { const loader = document.getElementById("cumpl_loader"); if (loader) loader.style.display = "none"; });
+      .catch(err => {
+        console.error(err);
+        showError("Error cargando CSV: " + (err?.message || err));
+      })
+      .finally(() => {
+        const loader = document.getElementById("cumpl_loader");
+        if (loader) loader.style.display = "none";
+      });
   };
+
 })();
+
