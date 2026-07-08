@@ -955,6 +955,9 @@
     fetchWithCache(csvUrl + "?t=" + window.CACHE_BUSTER)
       .then(text => {
         const m = parseDelimited(text, DELIM); if (!m.length || m.length < 2) { showError("El CSV está vacío."); return; }
+      /* ============================
+           DETECCIÓN Y ASIGNACIÓN DE COLUMNAS DEL CSV
+        ============================ */
         headers = m[0].map(clean);
         CLIENT_COL = CLIENT_CANDIDATES.find(c => headers.includes(c));
         if (!CLIENT_COL) { showError("No encuentro columna CLIENTE."); return; }
@@ -968,46 +971,81 @@
         const missing = required.filter(c => !headers.includes(c));
         if (missing.length) { showError("Faltan columnas: " + missing.join(", ")); return; }
 
+        // Mapeo plano de datos
         data = m.slice(1).map(row => { const o = {}; headers.forEach((h, i) => (o[h] = clean(row[i]))); return o; });
 
+        // Configuración de los textos de ayuda (hints) en pantalla
         setText("cumpl_clienteHint", `Columna cliente: ${CLIENT_COL}`);
         setText("cumpl_clasif2Hint", CLASIF2_COL ? `Columna: ${CLASIF2_COL}` : "Columna: (no encontrada)");
         setText("cumpl_gcocHint", GCOC_COL ? `Columna: ${GCOC_COL}` : "Columna: (no encontrada)");
         setText("centroHint", CENTRO_COL ? `Columna: ${CENTRO_COL}` : "Columna: (no encontrada)");
         setText("condicionAlmacenHint", CONDICION_ALMACEN_COL ? `Columna: ${CONDICION_ALMACEN_COL}` : "Columna: (no encontrada)");
 
-        renderClientes(); renderCentros(); renderCondicionAlmacen(); applyAll();
+        // Renderizado inicial en cascada de los selectores select
+        renderClientes(); 
+        renderCentros(); 
+        renderCondicionAlmacen(); 
+        applyAll();
 
-        /* LISTENERS */
-        document.getElementById("cumpl_clienteSelect")?.addEventListener("change", (e) => { enforceAllOption(e.target); applyAll(); });
-        document.getElementById("cumpl_clasif2Select")?.addEventListener("change", (e) => {
-          enforceAllOption(e.target); const gc = document.getElementById("cumpl_gcocSelect");
-          if (gc) { gc.selectedIndex = 0; enforceAllOption(gc); } applyAll();
+        /* ============================
+           LISTENERS DE FILTROS TRADICIONALES
+        ============================ */
+        document.getElementById("cumpl_clienteSelect")?.addEventListener("change", (e) => { 
+          enforceAllOption(e.target); 
+          // Re-renderizamos las condiciones de almacén para que se adapten a la nueva obra elegida
+          renderCondicionAlmacen(); 
+          applyAll(); 
         });
+        
+        document.getElementById("cumpl_clasif2Select")?.addEventListener("change", (e) => {
+          enforceAllOption(e.target); 
+          const gc = document.getElementById("cumpl_gcocSelect");
+          if (gc) { gc.selectedIndex = 0; enforceAllOption(gc); } 
+          applyAll();
+        });
+        
         document.getElementById("cumpl_gcocSelect")?.addEventListener("change", (e) => { enforceAllOption(e.target); applyAll(); });
         document.getElementById("centroSelect")?.addEventListener("change", (e) => { enforceAllOption(e.target); applyAll(); });
         
         document.getElementById("cumpl_mesSelect")?.addEventListener("change", (e) => {
-          enforceAllOption(e.target); updateMesTitleFromSelect();
-          const rows = filteredRowsNoMes(); const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))].sort();
+          enforceAllOption(e.target); 
+          updateMesTitleFromSelect();
+          const rows = filteredRowsNoMes(); 
+          const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))].sort();
           updateKPIsMonthly(rows, months);
         });
 
+        /* ============================
+           🌟 LISTENERS DEL COMPONENTE EN CASCADA (ALMACÉN)
+        ============================ */
         const chkSoloAlmacen = document.getElementById("chkSoloAlmacen");
         const condicionSelect = document.getElementById("condicionAlmacenSelect");
 
         chkSoloAlmacen?.addEventListener("change", (e) => {
           if (condicionSelect) {
             condicionSelect.disabled = !e.target.checked;
-            if (!e.target.checked) { condicionSelect.selectedIndex = 0; enforceAllOption(condicionSelect); }
-            else { renderCondicionAlmacen(); }
+            if (!e.target.checked) { 
+              condicionSelect.selectedIndex = 0; 
+              enforceAllOption(condicionSelect); 
+            } else { 
+              // Al activar la casilla, forzamos que se carguen las opciones de la obra activa
+              renderCondicionAlmacen(); 
+            }
           }
           applyAll();
         });
-        condicionSelect?.addEventListener("change", (e) => { enforceAllOption(e.target); applyAll(); });
+        
+        condicionSelect?.addEventListener("change", (e) => { 
+          enforceAllOption(e.target); 
+          applyAll(); 
+        });
 
+        /* ============================
+           BOTONES DE ACCIÓN GENERALES
+        ============================ */
         document.getElementById("cumpl_btnDownloadNO")?.addEventListener("click", () => {
-          const rowsFilt = filteredRowsByAll(); const noRows = getNoEntregadosRows(rowsFilt);
+          const rowsFilt = filteredRowsByAll(); 
+          const noRows = getNoEntregadosRows(rowsFilt);
           if (!noRows.length) { alert("No hay NO ENTREGADOS."); return; }
           const filename = `NO_ENTREGADOS_${safeFilePart(selLabel("cumpl_clienteSelect"))}.csv`;
           downloadCSV(filename, noRows, headers);
@@ -1019,4 +1057,3 @@
       .catch(err => { console.error(err); showError("Error: " + (err?.message || err)); })
       .finally(() => { const loader = document.getElementById("cumpl_loader"); if (loader) loader.style.display = "none"; });
   };
-})();
