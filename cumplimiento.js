@@ -1421,16 +1421,19 @@ function renderCondicionAlmacen() {
   /* ============================
      EXPOSE DEFERRED INITIALIZATION LIFE CYCLE HOOK
   =========================== */
+ /* ============================
+     EXPOSE DEFERRED INITIALIZATION LIFE CYCLE HOOK
+  =========================== */
   window.initCumplimiento = function() {
     if (window.cumplimientoInitialized) return;
     window.cumplimientoInitialized = true;
 
     applyChartDefaults();
 
-    // fecha en header
+    // Fecha en header
     setText("lastUpdate", (window.LAST_UPDATE || "").toString().trim() || "--/--/----");
     
-    // fetch with cache
+    // Fetch con cache buster
     fetchWithCache(csvUrl + "?t=" + window.CACHE_BUSTER)
       .then(text => {
         const m = parseDelimited(text, DELIM);
@@ -1447,13 +1450,11 @@ function renderCondicionAlmacen() {
           return;
         }
 
-   CLASIF2_COL = CLASIF2_CANDIDATES.find(c => headers.includes(c)) || null;
+        CLASIF2_COL = CLASIF2_CANDIDATES.find(c => headers.includes(c)) || null;
         GCOC_COL = GCOC_CANDIDATES.find(c => headers.includes(c)) || null;
         CENTRO_COL = CENTRO_CANDIDATES.find(c => headers.includes(c)) || null;
-        // 🌟 Detectamos dinámicamente si la columna está presente en el encabezado del CSV
         CONDICION_ALMACEN_COL = CONDICION_ALMACEN_CANDIDATES.find(c => headers.includes(c)) || null;
 
-        
         const required = [FECHA_COL, AT_COL, FT_COL, NO_COL];
         const missing = required.filter(c => !headers.includes(c));
         if (missing.length) {
@@ -1467,21 +1468,22 @@ function renderCondicionAlmacen() {
           return o;
         });
 
+        // Configuración de textos de ayuda (hints)
         setText("cumpl_clienteHint", `Columna cliente: ${CLIENT_COL}`);
         setText("cumpl_clasif2Hint", CLASIF2_COL ? `Columna: ${CLASIF2_COL}` : "Columna: (no encontrada)");
         setText("cumpl_gcocHint", GCOC_COL ? `Columna: ${GCOC_COL}` : "Columna: (no encontrada)");
         setText("centroHint", CENTRO_COL ? `Columna: ${CENTRO_COL}` : "Columna: (no encontrada)");
-        setText("centroHint", CENTRO_COL ? `Columna: ${CENTRO_COL}` : "Columna: (no encontrada)");
-        // 🌟 Seteamos el texto e inicializamos las opciones
         setText("condicionAlmacenHint", CONDICION_ALMACEN_COL ? `Columna: ${CONDICION_ALMACEN_COL}` : "Columna: (no encontrada)");
 
+        // Renderizado inicial de controles
         renderClientes();
         renderCentros();
-        // 🌟 Renderizamos las opciones de condición de almacén
         renderCondicionAlmacen();
         applyAll();
 
-        // Listeners con IDs únicos
+        /* ============================
+           LISTENERS DE FILTROS TRADICIONALES
+        ============================ */
         document.getElementById("cumpl_clienteSelect")?.addEventListener("change", (e) => {
           enforceAllOption(e.target);
           applyAll();
@@ -1502,22 +1504,32 @@ function renderCondicionAlmacen() {
         document.getElementById("centroSelect")?.addEventListener("change", (e) => {
           enforceAllOption(e.target);
           applyAll();
-          renderCentros();
-        renderCondicionAlmacen();
-        applyAll();
+        });
 
-        // 🌟 LISTENERS DEL NUEVO COMPONENTE EN CASCADA
+        document.getElementById("cumpl_mesSelect")?.addEventListener("change", (e) => {
+          enforceAllOption(e.target);
+          updateMesTitleFromSelect();
+          const rows = filteredRowsNoMes();
+          const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))].sort();
+          updateKPIsMonthly(rows, months);
+        });
+
+        /* ============================
+           🌟 LISTENERS DEL COMPONENTE EN CASCADA
+        ============================ */
         const chkSoloAlmacen = document.getElementById("chkSoloAlmacen");
         const condicionSelect = document.getElementById("condicionAlmacenSelect");
 
         chkSoloAlmacen?.addEventListener("change", (e) => {
           if (condicionSelect) {
-            // Habilitamos o deshabilitamos el cuadro de selección
             condicionSelect.disabled = !e.target.checked;
-            // Si se desactiva, restablecemos la selección interna a "Todos"
             if (!e.target.checked) {
+              // Si se apaga el botón, restablecemos a "Todos"
               condicionSelect.selectedIndex = 0;
               enforceAllOption(condicionSelect);
+            } else {
+              // Si se activa, volvemos a renderizar las opciones reales para asegurar que carguen
+              renderCondicionAlmacen();
             }
           }
           applyAll();
@@ -1527,21 +1539,10 @@ function renderCondicionAlmacen() {
           enforceAllOption(e.target);
           applyAll();
         });
-   
 
-        // 🌟 NUEVO LISTENERS: Ejecutar los cálculos cuando cambie la selección de almacén
-        document.getElementById("condicionAlmacenSelect")?.addEventListener("change", (e) => {
-          enforceAllOption(e.target);
-          applyAll();
-        });
-        document.getElementById("cumpl_mesSelect")?.addEventListener("change", (e) => {
-          enforceAllOption(e.target);
-          updateMesTitleFromSelect();
-          const rows = filteredRowsNoMes();
-          const months = [...new Set(rows.map(getMonthKeyFromRow).filter(Boolean))].sort();
-          updateKPIsMonthly(rows, months);
-        });
-
+        /* ============================
+           BOTONES DE ACCIÓN (Descarga y Limpieza)
+        ============================ */
         document.getElementById("cumpl_btnDownloadNO")?.addEventListener("click", () => {
           const rowsFilt = filteredRowsByAll();
           const noRows = getNoEntregadosRows(rowsFilt);
@@ -1552,9 +1553,8 @@ function renderCondicionAlmacen() {
           }
 
           const cols = headers.slice();
-
           const cliente = safeFilePart(selLabel("cumpl_clienteSelect"));
-          const c2 = "Todos"; // default
+          const c2 = "Todos";
           const gc = safeFilePart(selLabel("cumpl_gcocSelect"));
           const centro = safeFilePart(selLabel("centroSelect"));
           const mes = safeFilePart(selLabel("cumpl_mesSelect"));
@@ -1578,5 +1578,3 @@ function renderCondicionAlmacen() {
         if (loader) loader.style.display = "none";
       });
   };
-
-})();
