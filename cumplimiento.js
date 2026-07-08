@@ -418,6 +418,27 @@ function filteredRowsNoMes() {
     fillSelect("centroSelect", vals, "Todos");
   }
 
+function renderCondicionAlmacen() {
+    const hint = document.getElementById("condicionAlmacenHint");
+    if (!CONDICION_ALMACEN_COL) {
+      if (hint) hint.textContent = "Columna: (no encontrada)";
+      const sel = document.getElementById("condicionAlmacenSelect");
+      if (sel) { sel.disabled = true; sel.innerHTML = `<option value="">Todos</option>`; }
+      return;
+    }
+    if (hint) hint.textContent = `Columna: ${CONDICION_ALMACEN_COL}`;
+    
+    const vals = uniqSorted(data.map(r => r[CONDICION_ALMACEN_COL]));
+    fillSelect("condicionAlmacenSelect", vals, "Todos (Almacén)");
+    
+    // Controlamos el estado inicial basado en el checkbox
+    const chk = document.getElementById("chkSoloAlmacen");
+    const sel = document.getElementById("condicionAlmacenSelect");
+    if (sel && chk) {
+      sel.disabled = !chk.checked;
+    }
+  }
+
   function renderClasif2(rowsBase) {
     const hint = document.getElementById("cumpl_clasif2Hint");
     if (!CLASIF2_COL) {
