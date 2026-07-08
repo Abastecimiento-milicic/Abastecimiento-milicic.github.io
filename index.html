@@ -254,8 +254,7 @@
             <div id="cumpl_mesHint" class="hint">Mes seleccionado</div>
           </div>
 
-          <!-- AQUÍ VA EL FILTRO DE CENTRO (Línea 92) -->
-        <div class="filter">
+       <div class="filter">
             <label>CENTRO</label>
             <select id="centroSelect" multiple size="6" class="multi-select">
               <option value="">Todos</option>
@@ -263,16 +262,17 @@
             <div id="centroHint" class="hint">Columna: -</div>
           </div>
 
-          <div class="filter">
-            <label style="background-color: #2563eb; display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Activar para filtrar solo datos de almacén">
+          <div class="filter" style="display: flex; flex-direction: column; height: 100%;">
+            <label style="background-color: #2563eb; display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 8px; width: 100%; justify-content: center; box-sizing: border-box;" title="Activar para filtrar solo datos de almacén">
               <input type="checkbox" id="chkSoloAlmacen" style="margin: 0; cursor: pointer;">
               VER SOLO ALMACÉN
             </label>
-            <select id="condicionAlmacenSelect" multiple size="6" class="multi-select" disabled>
+            <select id="condicionAlmacenSelect" multiple size="4" class="multi-select" style="height: 110px !important;" disabled>
               <option value="">(Activa la casilla arriba)</option>
             </select>
             <div id="condicionAlmacenHint" class="hint">Columna: -</div>
           </div>
+
           <div class="filter">
             <label>&nbsp;</label>
             <button id="cumpl_btnDownloadNO" class="btn">
@@ -280,7 +280,7 @@
             </button>
             <div class="hint">Exporta CSV con “;”</div>
           </div>
-        </div>
+          
       </section>
 
       <!-- KPIs ACUMULADO -->
