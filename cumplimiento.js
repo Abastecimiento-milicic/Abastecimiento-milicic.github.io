@@ -1443,10 +1443,13 @@ function renderCondicionAlmacen() {
           return;
         }
 
-        CLASIF2_COL = CLASIF2_CANDIDATES.find(c => headers.includes(c)) || null;
+   CLASIF2_COL = CLASIF2_CANDIDATES.find(c => headers.includes(c)) || null;
         GCOC_COL = GCOC_CANDIDATES.find(c => headers.includes(c)) || null;
         CENTRO_COL = CENTRO_CANDIDATES.find(c => headers.includes(c)) || null;
+        // 🌟 Detectamos dinámicamente si la columna está presente en el encabezado del CSV
+        CONDICION_ALMACEN_COL = CONDICION_ALMACEN_CANDIDATES.find(c => headers.includes(c)) || null;
 
+        
         const required = [FECHA_COL, AT_COL, FT_COL, NO_COL];
         const missing = required.filter(c => !headers.includes(c));
         if (missing.length) {
@@ -1464,9 +1467,14 @@ function renderCondicionAlmacen() {
         setText("cumpl_clasif2Hint", CLASIF2_COL ? `Columna: ${CLASIF2_COL}` : "Columna: (no encontrada)");
         setText("cumpl_gcocHint", GCOC_COL ? `Columna: ${GCOC_COL}` : "Columna: (no encontrada)");
         setText("centroHint", CENTRO_COL ? `Columna: ${CENTRO_COL}` : "Columna: (no encontrada)");
+        setText("centroHint", CENTRO_COL ? `Columna: ${CENTRO_COL}` : "Columna: (no encontrada)");
+        // 🌟 Seteamos el texto e inicializamos las opciones
+        setText("condicionAlmacenHint", CONDICION_ALMACEN_COL ? `Columna: ${CONDICION_ALMACEN_COL}` : "Columna: (no encontrada)");
 
         renderClientes();
         renderCentros();
+        // 🌟 Renderizamos las opciones de condición de almacén
+        renderCondicionAlmacen();
         applyAll();
 
         // Listeners con IDs únicos
@@ -1492,6 +1500,11 @@ function renderCondicionAlmacen() {
           applyAll();
         });
 
+        // 🌟 NUEVO LISTENERS: Ejecutar los cálculos cuando cambie la selección de almacén
+        document.getElementById("condicionAlmacenSelect")?.addEventListener("change", (e) => {
+          enforceAllOption(e.target);
+          applyAll();
+        });
         document.getElementById("cumpl_mesSelect")?.addEventListener("change", (e) => {
           enforceAllOption(e.target);
           updateMesTitleFromSelect();
