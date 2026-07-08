@@ -1368,16 +1368,14 @@ function renderCondicionAlmacen() {
     return rows.filter(r => toNumber(r[NO_COL]) > 0);
   }
 
-  function clearAllFilters() {
-    const selects = ["cumpl_clienteSelect", "cumpl_clasif2Select", "cumpl_gcocSelect", "cumpl_mesSelect", "centroSelect"];
-    // 🌟 Agregamos "condicionAlmacenSelect" a la lista de restablecimiento
+ function clearAllFilters() {
     const chk = document.getElementById("chkSoloAlmacen");
     if (chk) chk.checked = false;
+    
     const selCond = document.getElementById("condicionAlmacenSelect");
     if (selCond) selCond.disabled = true;
+
     const selects = ["cumpl_clienteSelect", "cumpl_clasif2Select", "cumpl_gcocSelect", "cumpl_mesSelect", "centroSelect", "condicionAlmacenSelect"];
-    selects.forEach(id => {
-      const sel = document.getElementById(id);
     selects.forEach(id => {
       const sel = document.getElementById(id);
       if (!sel) return;
