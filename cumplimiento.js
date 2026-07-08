@@ -1370,6 +1370,10 @@ function renderCondicionAlmacen() {
 
   function clearAllFilters() {
     const selects = ["cumpl_clienteSelect", "cumpl_clasif2Select", "cumpl_gcocSelect", "cumpl_mesSelect", "centroSelect"];
+    // 🌟 Agregamos "condicionAlmacenSelect" a la lista de restablecimiento
+    const selects = ["cumpl_clienteSelect", "cumpl_clasif2Select", "cumpl_gcocSelect", "cumpl_mesSelect", "centroSelect", "condicionAlmacenSelect"];
+    selects.forEach(id => {
+      const sel = document.getElementById(id);
     selects.forEach(id => {
       const sel = document.getElementById(id);
       if (!sel) return;
