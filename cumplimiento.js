@@ -360,7 +360,7 @@
     return rows;
   }
 
-  function filteredRowsNoMes() {
+function filteredRowsNoMes() {
     let rows = rowsByClienteBase();
 
     const c2s = getCheckedClasif2();
@@ -371,9 +371,22 @@
     const cents = getSelValues("centroSelect");
     if (cents.length && CENTRO_COL) rows = rows.filter(r => cents.includes(clean(r[CENTRO_COL])));
     
+    // 🌟 LÓGICA EN CASCADA: Solo filtra si el botón principal está activado
+    const chkSoloAlmacen = document.getElementById("chkSoloAlmacen");
+    if (chkSoloAlmacen && chkSoloAlmacen.checked && CONDICION_ALMACEN_COL) {
+      const conds = getSelValues("condicionAlmacenSelect");
+      if (conds.length) {
+        // Si el usuario eligió opciones específicas (ej: Reposición directa)
+        rows = rows.filter(r => conds.includes(clean(r[CONDICION_ALMACEN_COL])));
+      } else {
+        // Si activó el botón pero no marcó nada abajo, por defecto mostramos 
+        // cualquier fila de almacén que NO esté vacía para que no se rompa la vista
+        rows = rows.filter(r => clean(r[CONDICION_ALMACEN_COL]) !== "");
+      }
+    }
+    
     return rows;
   }
-
   function filteredRowsByAll() {
     const rows = filteredRowsNoMes();
     const ms = getSelValues("cumpl_mesSelect");
