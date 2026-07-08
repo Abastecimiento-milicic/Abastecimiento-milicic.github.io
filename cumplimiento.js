@@ -1498,7 +1498,32 @@ function renderCondicionAlmacen() {
         document.getElementById("centroSelect")?.addEventListener("change", (e) => {
           enforceAllOption(e.target);
           applyAll();
+          renderCentros();
+        renderCondicionAlmacen();
+        applyAll();
+
+        // 🌟 LISTENERS DEL NUEVO COMPONENTE EN CASCADA
+        const chkSoloAlmacen = document.getElementById("chkSoloAlmacen");
+        const condicionSelect = document.getElementById("condicionAlmacenSelect");
+
+        chkSoloAlmacen?.addEventListener("change", (e) => {
+          if (condicionSelect) {
+            // Habilitamos o deshabilitamos el cuadro de selección
+            condicionSelect.disabled = !e.target.checked;
+            // Si se desactiva, restablecemos la selección interna a "Todos"
+            if (!e.target.checked) {
+              condicionSelect.selectedIndex = 0;
+              enforceAllOption(condicionSelect);
+            }
+          }
+          applyAll();
         });
+
+        condicionSelect?.addEventListener("change", (e) => {
+          enforceAllOption(e.target);
+          applyAll();
+        });
+   
 
         // 🌟 NUEVO LISTENERS: Ejecutar los cálculos cuando cambie la selección de almacén
         document.getElementById("condicionAlmacenSelect")?.addEventListener("change", (e) => {
