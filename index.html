@@ -20,11 +20,9 @@
   <link rel="stylesheet" href="demoras.css" />
   <link rel="stylesheet" href="ejemplo.css" />
   
-  <!-- Chart.js and plugin loaded once globally -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   
-  <!-- Apache ECharts loaded once globally -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 
   <style>
@@ -188,11 +186,7 @@
 
   <main class="container">
 
-    <!-- ═══════════════════════════════════════════════════════
-         PANEL: CUMPLIMIENTO (Active by default)
-    ═══════════════════════════════════════════════════════ -->
     <section id="panel-cumplimiento" class="tab-panel">
-      <!-- LOADER CUMPLIMIENTO -->
       <div id="cumpl_loader" class="loader-overlay">
         <div class="spinner-bars">
           <div class="bar"></div>
@@ -205,7 +199,6 @@
 
       <div id="cumpl_msg"></div>
 
-      <!-- FILTROS -->
       <section class="panel">
         <div class="panel-title" style="display: flex; align-items: center;">FILTROS
           <button id="cumpl_btnClearFilters" class="btn-clear" title="Restablecer todos los filtros">🧹 Limpiar Filtros</button>
@@ -223,7 +216,7 @@
             <div class=&quot;hm-tip&quot;>💡 Si no seleccionás ningún filtro, se muestran todos los datos disponibles.</div>
           `)" title="Ayuda sobre los filtros">ℹ</button>
         </div>
-        <div class="panel-body filters" style="display: grid !important; grid-template-columns: repeat(6, 1fr) !important; gap: 12px; padding: 15px !important; align-items: start;">
+        <div class="panel-body filters filters-6">
           <div class="filter">
             <label>CLIENTE / OBRA</label>
             <select id="cumpl_clienteSelect" multiple size="6" class="multi-select">
@@ -262,27 +255,16 @@
             <div id="centroHint" class="hint">Columna: -</div>
           </div>
 
-          <!-- 🌟 CONDICIÓN ALMACÉN Y DESCARGA JUNTOS EN LA 6TA COLUMNA -->
-          <div class="filter" style="display: flex; flex-direction: column; gap: 10px; min-height: 155px; justify-content: space-between;">
-            <div style="width: 100%;">
-              <label style="background-color: #2563eb; display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 6px; width: 100%; justify-content: center; box-sizing: border-box; font-size: 0.72rem; padding: 2px 4px;" title="Activar para filtrar solo datos de almacén">
-                <input type="checkbox" id="chkSoloAlmacen" style="margin: 0; cursor: pointer;">
-                VER SOLO ALMACÉN
-              </label>
-              <select id="condicionAlmacenSelect" multiple size="2" class="multi-select" style="height: 52px !important; font-size: 0.8rem;" disabled>
-                <option value="">(Activa arriba)</option>
-              </select>
-              <div id="condicionAlmacenHint" class="hint" style="margin-top: 2px;">Columna: -</div>
-            </div>
-
-            <button id="cumpl_btnDownloadNO" class="btn" style="width: 100% !important; font-size: 0.72rem !important; padding: 6px 2px; height: 32px !important; margin: 0 !important; white-space: nowrap;">
+          <div class="filter">
+            <label>&nbsp;</label>
+            <button id="cumpl_btnDownloadNO" class="btn">
               ⬇ Descargar NO entregados
             </button>
+            <div class="hint">Exporta CSV con “;”</div>
           </div>
         </div>
       </section>
 
-      <!-- KPIs ACUMULADO -->
       <section class="panel">
         <div class="panel-title">CUMPLIMIENTO ACUMULADO (últimos 12 meses)
           <button class="help-btn" onclick="openHelp('KPIs — Cumplimiento Acumulado', `
@@ -347,7 +329,6 @@
         </div>
       </section>
 
-      <!-- KPIs MES -->
       <section class="panel">
         <div id="cumpl_panelMesTitle" class="panel-title">CUMPLIMIENTO - MES SELECCIONADO
           <button class="help-btn" onclick="openHelp('KPIs — Mes Seleccionado', `
@@ -405,7 +386,6 @@
         </div>
       </section>
 
-      <!-- GRAFICO -->
       <section class="panel">
         <div class="panel-title">CUMPLIMIENTO POR MES
           <button class="help-btn" onclick="openHelp('Gráfico — Cumplimiento por Mes', `
@@ -423,7 +403,6 @@
         </div>
       </section>
 
-      <!-- TENDENCIA -->
       <section class="panel">
         <div class="panel-title">TENDENCIA DE CUMPLIMIENTO
           <button class="help-btn" onclick="openHelp('Gráfico — Tendencia de Cumplimiento', `
@@ -447,13 +426,9 @@
     </section>
 
 
-    <!-- ═══════════════════════════════════════════════════════
-         PANEL: ANÁLISIS MM
-    ═══════════════════════════════════════════════════════ -->
     <section id="panel-mm" class="tab-panel" style="display: none;">
       <div id="mm_msg"></div>
 
-      <!-- FILTRO -->
       <section class="panel">
         <div class="panel-title">FILTROS
           <button class="help-btn" onclick="openHelp('Filtro — Análisis MM', `
@@ -480,7 +455,6 @@
         </div>
       </section>
 
-      <!-- KPIs -->
       <section class="panel">
         <div class="panel-title">DISPONIBILIDAD
           <button class="help-btn" onclick="openHelp('KPIs — Disponibilidad', `
@@ -528,7 +502,6 @@
         </div>
       </section>
 
-      <!-- ESTADOS -->
       <section class="panel">
         <div class="panel-title">ESTADOS Y VALORIZACIÓN
           <button class="help-btn" onclick="openHelp('Gráfico — Estados y Valorización', `
@@ -544,7 +517,6 @@
         <div class="panel-body">
           <div class="mm-card">
             <div class="mm-two">
-              <!-- Bloque 1: Gráfico circular + leyenda -->
               <div class="mm-block">
                 <div class="mm-block-title">ESTADOS</div>
                 <div class="mm-donut-wrap">
@@ -553,7 +525,6 @@
                 <div class="mm-legend" id="mm_donutLegend" aria-label="Leyenda del gráfico"></div>
               </div>
 
-              <!-- Bloque 2: Tabla valorización -->
               <div class="mm-block">
                 <div class="mm-block-title-row">
                   <div class="mm-block-title">VALORIZACIÓN DE STOCK</div>
@@ -588,7 +559,6 @@
         </div>
       </section>
 
-      <!-- EVOLUCIÓN -->
       <section class="panel">
         <div class="panel-title">EVOLUCIÓN POR MES
           <button class="help-btn" onclick="openHelp('Gráfico — Evolución por Mes', `
@@ -611,13 +581,9 @@
     </section>
 
 
-    <!-- ═══════════════════════════════════════════════════════
-         PANEL: DEMORAS
-    ═══════════════════════════════════════════════════════ -->
     <section id="panel-demoras" class="tab-panel" style="display: none;">
       <div id="dem_msg"></div>
 
-      <!-- FILTROS -->
       <section class="panel">
         <div class="panel-body filters filters-demoras">
           <div class="filter">
@@ -630,8 +596,7 @@
           <div class="filter">
             <label>CLASIFICACIÓN PEDIDO</label>
             <div id="dem_clasifList" class="check-list">
-              <!-- populated by JS -->
-            </div>
+              </div>
             <div id="dem_clasifHint" class="hint">Columna: -</div>
           </div>
 
@@ -648,7 +613,6 @@
         </div>
       </section>
 
-      <!-- KPIs -->
       <section class="panel">
         <div class="panel-title">ITEMS CUMPLIDOS FT - DESGLOSE POR ÁREA</div>
         <div class="panel-body kpi-grid kpi-grid-3">
@@ -681,7 +645,6 @@
         </div>
       </section>
 
-      <!-- CHARTS -->
       <section class="panel">
         <div class="panel-title">CANTIDAD Y PORCENTAJE DE DEMORAS POR MES</div>
         <div class="panel-body">
@@ -693,7 +656,6 @@
         </div>
       </section>
 
-      <!-- DEMORAS X AREA -->
       <section class="panel">
         <div class="panel-title">DEMORAS X AREA SEGUN MES SELECCIONADO</div>
         <div class="panel-body">
@@ -712,7 +674,6 @@
         </div>
       </section>
 
-      <!-- DEMORAS SEGÚN MES -->
       <section class="panel">
         <div class="panel-title">DEMORAS PROYECTO</div>
         <div class="panel-body">
@@ -733,9 +694,6 @@
     </section>
 
 
-    <!-- ═══════════════════════════════════════════════════════
-         PANEL: SERVICIOS
-    ═══════════════════════════════════════════════════════ -->
     <section id="panel-servicios" class="tab-panel" style="display: none;">
       <div id="serv_loader" class="loader-overlay">
         <div class="spinner-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
@@ -806,23 +764,18 @@
     </section>
 
 
-    <!-- ═══════════════════════════════════════════════════════
-         PANEL: EJEMPLO (Static instructions)
-    ═══════════════════════════════════════════════════════ -->
     <section id="panel-ejemplo" class="tab-panel" style="display: none;">
       <div class="ej-hero">
         <h1>📊 ¿Cómo utilizar el Dashboard de Abastecimiento?</h1>
         <h3>Actualización del reporte: lunes y jueves desde las 13:00 hs</h3>
       </div>
 
-      <!-- TABS NAVIGATION -->
       <div class="ej-tabs-container">
         <button class="ej-tab-btn active" onclick="showEjemploTab('tab-mm')">ANÁLISIS MM</button>
         <button class="ej-tab-btn" onclick="showEjemploTab('tab-cumplimiento')">CUMPLIMIENTO</button>
         <button class="ej-tab-btn" onclick="showEjemploTab('tab-demoras')">DEMORAS</button>
       </div>
 
-      <!-- TAB: ANÁLISIS MM -->
       <section id="tab-mm" class="ej-tab-content active">
         <section class="ej-scenario">
           <div class="ej-scenario-header">
@@ -945,7 +898,7 @@
               <div class="ej-reading">
                 <div class="ej-reading-item ej-ri-info">
                   <span class="ej-ri-icon">📌</span>
-                  <span>Primero seleccioná la obra que desees analizar in el filtro</span>
+                  <span>Primero seleccioná la obra que desees analizar en el filtro</span>
                 </div>
               </div>
               <div class="ej-reading">
@@ -959,7 +912,6 @@
         </section>  
       </section>
 
-      <!-- TAB: CUMPLIMIENTO -->
       <section id="tab-cumplimiento" class="ej-tab-content">
         <section class="ej-scenario">
           <div class="ej-hero" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #1e293b; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
@@ -1133,7 +1085,6 @@
         </section>
       </section>
 
-      <!-- TAB: DEMORAS -->
       <section id="tab-demoras" class="ej-tab-content">
         <section class="ej-scenario">
           <div class="ej-scenario-header">
@@ -1156,7 +1107,7 @@
               <div class="ej-reading">
                 <div class="ej-reading-item ej-ri-info">
                   <span class="ej-ri-icon">📌</span>
-                  <span>En el filtro <strong>CLIENTE</strong> y la CLASIFICACIÓN elegí de la lista la obra que desees. Por ej.: <strong>"00341 Mov. Suelos San Luis"</strong>. Si querés ver solo el mes de febrero, seleccioná <strong>"FEBRERO 2026"</strong> in el filtro de <strong>MES</strong> con un click.</span>
+                  <span>En el filtro <strong>CLIENTE</strong> y la CLASIFICACIÓN elegí de la lista la obra que desees. Por ej.: <strong>"00341 Mov. Suelos San Luis"</strong>. Si querés ver solo el mes de febrero, seleccioná <strong>"FEBRERO 2026"</strong> en el filtro de <strong>MES</strong> con un click.</span>
                 </div>
                 <div class="ej-reading-item ej-ri-info">
                   <span class="ej-ri-icon">📌</span>
@@ -1271,18 +1222,15 @@
 
   </main>
 
-  <!-- SCRIPTS Y CONTROLADOR DE PESTAÑAS SPA -->
-
+  <script src="last-update.js?v=20260710"></script>
+  <script src="help.js?v=20260710"></script>
+  <script src="cache-utils.js?v=20260710"></script>
   
-<script src="last-update.js?v=20260710"></script>  #si falla cache probar cambiar esta fecha
-  <script src="help.js?v=20260519"></script>
-  <script src="cache-utils.js?v=20260519"></script>
-  
-  <script src="cumplimiento.js?v=20260623"></script>
-  <script src="analisis-mm.js?v=20260519"></script>
-  <script src="evolucion.js?v=20260519"></script>
-  <script src="demoras.js?v=20260519"></script>
-  <script src="servicios.js?v=20260519"></script>
+  <script src="cumplimiento.js?v=20260710"></script>
+  <script src="analisis-mm.js?v=20260710"></script>
+  <script src="evolucion.js?v=20260710"></script>
+  <script src="demoras.js?v=20260710"></script>
+  <script src="servicios.js?v=20260710"></script>
 
   <script>
     // ═══════════════════════════════════════════════════════
