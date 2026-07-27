@@ -1,0 +1,333 @@
+/* ===== Demoras (demoras.html) ===== */
+
+@media (min-width: 900px) {
+  .page-demoras .filters.filters-demoras {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.page-demoras .filter-flex {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.page-demoras .filter-flex select {
+  flex: 1;
+}
+
+.page-demoras .filter-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (min-width: 1100px) {
+  .page-demoras .kpi-grid.kpi-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+
+/* ===== Tabla Demoras con bordes y heatmap ===== */
+.page-demoras .table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-sm);
+  background: #ffffff;
+  margin-top: 14px;
+}
+
+.page-demoras #dem_tablaAreas,
+.page-demoras #dem_tablaMotivos {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--font-body);
+  table-layout: auto !important; /* Auto scaling so columns fit beautifully */
+}
+
+.page-demoras #dem_tablaAreas th,
+.page-demoras #dem_tablaAreas td,
+.page-demoras #dem_tablaMotivos th,
+.page-demoras #dem_tablaMotivos td {
+  border: 1px solid #d0d7de;
+  padding: 10px 12px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+/* Specific column minimum widths so text never gets squished */
+.page-demoras #dem_tablaAreas th,
+.page-demoras #dem_tablaAreas td {
+  min-width: 95px;
+}
+.page-demoras #dem_tablaAreas th:first-child,
+.page-demoras #dem_tablaAreas td:first-child {
+  min-width: 80px;
+  font-weight: bold;
+}
+
+.page-demoras #dem_tablaMotivos th,
+.page-demoras #dem_tablaMotivos td {
+  min-width: 120px;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+.page-demoras #dem_tablaMotivos th:first-child,
+.page-demoras #dem_tablaMotivos td:first-child {
+  min-width: 80px;
+  font-weight: bold;
+}
+
+/* Headers Styling */
+.page-demoras #dem_tablaAreas thead th {
+  background: #f3f6f5;
+  border-bottom: 3.5px solid #0b5d46 !important;
+  font-weight: 700;
+  color: #0b1220;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.page-demoras #dem_tablaMotivos thead th {
+  background: #111827;
+  color: #ffffff;
+  font-weight: 700;
+  border-bottom: 3.5px solid #3b82f6 !important;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+/* Hover effects */
+.page-demoras #dem_tablaAreas tbody tr:hover td,
+.page-demoras #dem_tablaMotivos tbody tr:hover td {
+  filter: brightness(0.96);
+  transition: filter 0.15s ease;
+}
+
+/* Wrapper specifics */
+.page-demoras .table-wrap.table-wrap-tight {
+  overflow-x: auto !important; /* Allow scroll if content exceeds container width */
+}
+
+/* ===== DEMORAS: charts one below the other ===== */
+.page-demoras .grid-2 {
+  grid-template-columns: 1fr !important;
+}
+
+
+/* ===== Filtro MES + botón descarga en la misma línea ===== */
+.page-demoras .filter-inline {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.page-demoras .filter-inline select {
+  flex: 1 1 auto;
+}
+
+.page-demoras .btn.btn-sm {
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+
+/* ===== Chart Mes (ECharts) ===== */
+.page-demoras #chartMes {
+  height: 500px;
+}
+
+/* ===== Selectores Múltiples de Cumplimiento ===== */
+.page-demoras .multi-select {
+  border-radius: 8px;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.page-demoras .multi-select option {
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.page-demoras .multi-select option:checked {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important;
+  color: #ffffff !important;
+}
+
+.page-demoras .multi-select option:hover {
+  background-color: #f1f5f9;
+}
+
+/* Scrollbar estilizada */
+.page-demoras .multi-select::-webkit-scrollbar {
+  width: 6px;
+}
+.page-demoras .multi-select::-webkit-scrollbar-track {
+  background: transparent;
+}
+.page-demoras .multi-select::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.page-demoras .multi-select::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.page-demoras .filter label {
+  display: inline-block;
+  background-color: #0d9488;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+/* ===== Demoras 2 Modals, Sparklines and Layout styles ===== */
+
+.btn-info-highlight {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(59,130,246,0.3);
+  transition: all 0.2s ease;
+}
+.btn-info-highlight:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(59,130,246,0.4);
+}
+.btn-info-highlight svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  position: relative;
+  transform: translateY(-20px);
+  transition: transform 0.2s ease;
+}
+.modal-overlay.active .modal-content {
+  transform: translateY(0);
+}
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #64748b;
+  border: none;
+  background: none;
+  padding: 0;
+}
+.modal-close:hover {
+  color: #0f172a;
+}
+
+/* Resumen Global Layout */
+.page-demoras .dem-resumen-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: stretch;
+  padding: 20px;
+  background: #f8fafc;
+}
+@media (max-width: 900px) {
+  .page-demoras .dem-resumen-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Sparklines Table Styling */
+#dem_tableSparklines,
+#tableSparklines {
+  border-collapse: collapse;
+  width: 100%;
+}
+#dem_tableSparklines th, #dem_tableSparklines td,
+#tableSparklines th, #tableSparklines td {
+  border: 1px solid #e2e8f0;
+  padding: 10px;
+  vertical-align: middle;
+}
+#dem_tableSparklines tbody tr:hover,
+#tableSparklines tbody tr:hover {
+  background-color: #f1f5f9;
+}
+
+/* Mini sparkline svg style */
+.sparkline-svg {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 10px;
+}
+
+/* Actions details button styling */
+.btn-action-detail {
+  background: #0d9488;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-action-detail:hover {
+  background: #0f766e;
+  transform: scale(1.05);
+}
+/* Custom CSS Tooltip */
+.tooltip-container:hover .tooltip-text {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
