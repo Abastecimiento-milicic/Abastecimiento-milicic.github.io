@@ -1,5 +1,5 @@
 // Editá SOLO este archivo para cambiar la fecha mostrada en el header.
-window.LAST_UPDATE = "30/07/2026";
+window.LAST_UPDATE = "03/08/2026";
 
 let cb = sessionStorage.getItem('mi_cache_buster');
 if (!cb) {
