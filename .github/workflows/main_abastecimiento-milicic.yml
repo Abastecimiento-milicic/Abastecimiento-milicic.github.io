@@ -14,10 +14,6 @@ jobs:
       # 1. Descarga directo tus archivos del repositorio (incluyendo los CSV nuevos)
       - uses: actions/checkout@v4
 
-      # 1.5. Comprime los archivos del sitio web en un archivo ZIP excluyendo la carpeta .git y node_modules
-      - name: Zip artifact for deployment
-        run: zip -r release.zip . -x "*.git*" "node_modules/*"
-
       # 2. Sube los archivos directo a producción usando el Perfil de Publicación
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
@@ -26,5 +22,6 @@ jobs:
           app-name: 'abastecimiento-milicic'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: release.zip # Sube el archivo ZIP optimizado
+          package: . # Sube la raíz directamente
+
 
