@@ -364,7 +364,7 @@
     }
     if (hint) hint.textContent = `Columna: ${CENTRO_COL}`;
     const vals = uniqSorted(data.map(r => r[CENTRO_COL]));
-    const sel = document.getElementById("centroSelect");
+    const sel = document.getElementById("centroSelect"); 
     if (sel) sel.disabled = false;
     fillSelect("centroSelect", vals, "Todos");
   }
@@ -511,7 +511,7 @@
     setText("cumpl_kpiNOqty", `Cantidad: ${fmtInt(t.no)}`);
   }
 
-  function updateKPIsMonthly(rows, months) {
+    function updateKPIsMonthly(rows, months) {
     const ms = getSelValues("cumpl_mesSelect");
     if (!ms.length) {
       const t = calcTotals(rows);
@@ -543,26 +543,31 @@
       return;
     }
 
-    const mes = getSingleMes(months);
-    if (!mes) return;
+    // Si hay meses seleccionados, calculamos la sumatoria de todos los meses seleccionados
+    let at = 0, ft = 0, no = 0;
+    const setMeses = new Set(ms);
+    const selectedRows = rows.filter(r => setMeses.has(getMonthKeyFromRow(r)));
 
-    const idx = months.indexOf(mes);
-    const prevMes = idx > 0 ? months[idx - 1] : null;
+    for (const r of selectedRows) {
+      at += toNumber(r[AT_COL]);
+      ft += toNumber(r[FT_COL]);
+      no += toNumber(r[NO_COL]);
+    }
+    const total = at + ft + no;
+    const pctAT = total ? at / total : NaN;
+    const pctFT = total ? ft / total : NaN;
+    const pctNO = total ? no / total : NaN;
 
-    const cur = calcMonthTotals(rows, mes);
-    const prev = prevMes ? calcMonthTotals(rows, prevMes) : null;
+    setText("cumpl_kpiTotalMes", fmtInt(total));
 
-    setText("cumpl_kpiTotalMes", fmtInt(cur.total));
-
-    setText("cumpl_kpiATmes", fmtPct01(cur.pctAT));
+    setText("cumpl_kpiATmes", fmtPct01(pctAT));
     const elATmes = document.getElementById("cumpl_kpiATmes");
-    if (elATmes) elATmes.style.color = (isFinite(cur.pctAT) && cur.pctAT >= 0.78) ? "#16a34a" : "#ef4444";
+    if (elATmes) elATmes.style.color = (isFinite(pctAT) && pctAT >= 0.78) ? "#16a34a" : "#ef4444";
 
-    setText("cumpl_kpiFTmes", fmtPct01(cur.pctFT));
-    setText("cumpl_kpiNOmes", fmtPct01(cur.pctNO));
+    setText("cumpl_kpiFTmes", fmtPct01(pctFT));
+    setText("cumpl_kpiNOmes", fmtPct01(pctNO));
 
-    const mesRows = rows.filter(r => getMonthKeyFromRow(r) === mes);
-    const avgM = avgDelay(mesRows);
+    const avgM = avgDelay(selectedRows);
     setText("cumpl_kpiDemoraMes", isNaN(avgM) ? "-" : (Math.round(avgM) + " d"));
     const elDemM = document.getElementById("cumpl_kpiDemoraMes");
     if (elDemM) elDemM.style.color = (!isNaN(avgM) && avgM > 7) ? "#ef4444" : "#16a34a";
@@ -571,31 +576,36 @@
     const ftSub = document.getElementById("cumpl_kpiFTmesSub");
     const noSub = document.getElementById("cumpl_kpiNOmesSub");
 
-    if (!prev) {
-      setDelta(atSub, `Cant: ${fmtInt(cur.at)} · Sin mes anterior`, "delta-neutral");
-      setDelta(ftSub, `Cant: ${fmtInt(cur.ft)} · Sin mes anterior`, "delta-neutral");
-      setDelta(noSub, `Cant: ${fmtInt(cur.no)} · Sin mes anterior`, "delta-neutral");
-      return;
+    // Si se seleccionó solo un mes, podemos intentar calcular el delta vs mes anterior
+    if (ms.length === 1) {
+      const mes = ms[0];
+      const idx = months.indexOf(mes);
+      const prevMes = idx > 0 ? months[idx - 1] : null;
+      const prev = prevMes ? calcMonthTotals(rows, prevMes) : null;
+
+      if (prev) {
+        const dAT = deltaInfo(pctAT, prev.pctAT);
+        const dFT = deltaInfo(pctFT, prev.pctFT);
+        const dNO = deltaInfo(pctNO, prev.pctNO);
+
+        let clsAT = "delta-good"; if (dAT.diff < 0) clsAT = "delta-bad";
+        let clsFT = "delta-bad"; if (dFT.diff < 0) clsFT = "delta-good";
+        let clsNO = "delta-good"; if (dNO.diff > 0) clsNO = "delta-bad";
+
+        setDelta(atSub, `Cant: ${fmtInt(at)} · ${dAT.text}`, clsAT);
+        setDelta(ftSub, `Cant: ${fmtInt(ft)} · ${dFT.text}`, clsFT);
+        setDelta(noSub, `Cant: ${fmtInt(no)} · ${dNO.text}`, clsNO);
+        return;
+      }
     }
 
-    const dAT = deltaInfo(cur.pctAT, prev.pctAT);
-    const dFT = deltaInfo(cur.pctFT, prev.pctFT);
-    const dNO = deltaInfo(cur.pctNO, prev.pctNO);
-
-    let clsAT = "delta-good";
-    if (dAT.diff < 0) clsAT = "delta-bad";
-
-    let clsFT = "delta-bad";
-    if (dFT.diff < 0) clsFT = "delta-good";
-
-    let clsNO = "delta-good";
-    if (dNO.diff > 0) clsNO = "delta-bad";
-
-    setDelta(atSub, `Cant: ${fmtInt(cur.at)} · ${dAT.text}`, clsAT);
-    setDelta(ftSub, `Cant: ${fmtInt(cur.ft)} · ${dFT.text}`, clsFT);
-    setDelta(noSub, `Cant: ${fmtInt(cur.no)} · ${dNO.text}`, clsNO);
+    // Para múltiples meses o si no hay mes anterior para comparar
+    const labelMeses = ms.length > 1 ? "Meses selec." : "Sin mes anterior";
+    setDelta(atSub, `Cant: ${fmtInt(at)} · ${labelMeses}`, "delta-neutral");
+    setDelta(ftSub, `Cant: ${fmtInt(ft)} · ${labelMeses}`, "delta-neutral");
+    setDelta(noSub, `Cant: ${fmtInt(no)} · ${labelMeses}`, "delta-neutral");
   }
-
+  
   /* ============================
      CHART DEFAULTS (ECharts)
   ============================ */
