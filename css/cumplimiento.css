@@ -1,0 +1,119 @@
+/* ===== Cumplimiento (index.html) ===== */
+
+@media (min-width: 1100px) {
+
+  /* Filtros (6 columnas): Cliente, Clasificación 2, GC OC, Mes, Centro, Botón */
+  .page-cumplimiento .filters.filters-6 {
+    grid-template-columns: 1.3fr 1.1fr 1.0fr 0.9fr 1.0fr 1.1fr;
+  }
+
+  /* KPIs 4 columnas cuando uses .kpi-grid-4 */
+  .page-cumplimiento .kpi-grid.kpi-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.page-cumplimiento #msg {
+  margin-bottom: 10px;
+}
+
+
+/* KPI grid 5 columnas (para agregar demora promedio) */
+@media (min-width: 1100px) {
+  .page-cumplimiento .kpi-grid.kpi-grid-5 {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1099px) {
+  .page-cumplimiento .kpi-grid.kpi-grid-5 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+}
+
+/* KPI neutra */
+.page-cumplimiento .kpi.kpi-slate {
+  border-left: none;
+}
+
+
+/* =======================================================
+   Ajuste de alturas para dar más aire vertical a las etiquetas
+========================================================== */
+#chartMes {
+  height: 380px !important;  /* Le da los 80px extra que le faltaban para que no se corten las demoras */
+}
+
+#chartTendencia {
+  height: 260px !important;  /* Lo achicamos un toque para balancear el espacio en la pantalla */
+}
+
+/* =======================================================
+   Modernización de los Selectores Múltiples
+========================================================== */
+.page-cumplimiento .multi-select {
+  border-radius: 8px;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.page-cumplimiento .multi-select option {
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.page-cumplimiento .multi-select option:checked {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important;
+  color: #ffffff !important;
+}
+
+.page-cumplimiento .multi-select option:hover {
+  background-color: #f1f5f9;
+}
+
+/* Scrollbar estilizada */
+.page-cumplimiento .multi-select::-webkit-scrollbar {
+  width: 6px;
+}
+.page-cumplimiento .multi-select::-webkit-scrollbar-track {
+  background: transparent;
+}
+.page-cumplimiento .multi-select::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.page-cumplimiento .multi-select::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Estilos para el botón Limpiar Filtros */
+.page-cumplimiento .btn-clear {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 12px;
+  margin-right: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-cumplimiento .btn-clear:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #ffffff;
+}
