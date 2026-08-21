@@ -1716,6 +1716,19 @@ EXPEDICION = if [EXPEDICION CS] = 1 then 1 else null`
 LIBERACION SOLPED CS = if ([CLASE DE DOC] = "ZPAN" or "ZPAI" or "ZPAS") and [TIEMPO DE APROBACION SOLPED] > 2 
                        then [TIEMPO DE APROBACION SOLPED] - 2 else null
 
+COLOCACION OC CS = if [CARACTER DE GC]="LOCAL CS" and [CLASE DE DOC]="ZPAN" and [COLOCACION OC]<>null and [COLOCACION OC]>5 then [COLOCACION OC]-5
+                   else if [CARACTER DE GC]="LOCAL CS" and [CLASE DE DOC]="ZPAI" and [COLOCACION OC]<>null and [COLOCACION OC]>2 then [COLOCACION OC]-2 else null
+
+LIBERACION OC CS = if ([CLASE DE DOC]="ZPAN" or [CLASE DE DOC]="ZPAI") and [CARACTER DE GC]="LOCAL CS" and [TIEMPOS DE APROBACION OC]<>null and [TIEMPOS DE APROBACION OC]>2 then [TIEMPOS DE APROBACION OC]-2 else null
+
+ENTREGA DEL PROVEEDOR CS = if ([CLASE DE DOC]="ZPAN" or [CLASE DE DOC]="ZPAI") and [CARACTER DE GC]="LOCAL CS" and [DIF_ENTREGA_SELLO]<>null and [DIF_ENTREGA_SELLO]<0 then Number.Abs([DIF_ENTREGA_SELLO]) else null
+
+PLAZO DE ENTREGA EXCEDIDO CS = if [CARACTER DE GC]="LOCAL CS" and [PLAZO DE ENTREGA]<>null and [PLAZO DE ENTREGA]<0 then Number.Abs([PLAZO DE ENTREGA]) else null
+
+PROYECTO = if List.Sum({[LIBERACION SOLPED CS], [COLOCACION OC CS], [LIBERACION OC CS], [ENTREGA DEL PROVEEDOR CS], [PLAZO DE ENTREGA EXCEDIDO CS]}) > 0 then 1 else null`
+
+: areaName === 'PERIODO CORTO' ? `<b>Lógica de Cálculo PERIODO CORTO (Power Query M):</b>
+
 FECHAENTREGAMUYCERCANA = let d = Duration.Days([FECHA ENTREGA ESPERADA] - [FECHA DE EMISION NECESIDAD]), c = Text.Trim(Text.From([CLI])) in
   if d = null then null
   else if List.Contains({"ZPOE","ZPAS"}, [CLASE DE DOC]) then
@@ -1733,19 +1746,6 @@ FECHAENTREGAMUYCERCANA = let d = Duration.Days([FECHA ENTREGA ESPERADA] - [FECHA
       else if c="00374" and d<=18 then 1 else if c="00375" and d<=10 then 1 else if c="00376" and d<=8 then 1 else if c="00368" and d<=8 then 1
       else if c="00377" and d<13 then 1 else null
   else null
-
-COLOCACION OC CS = if [CARACTER DE GC]="LOCAL CS" and [CLASE DE DOC]="ZPAN" and [COLOCACION OC]<>null and [COLOCACION OC]>5 then [COLOCACION OC]-5
-                   else if [CARACTER DE GC]="LOCAL CS" and [CLASE DE DOC]="ZPAI" and [COLOCACION OC]<>null and [COLOCACION OC]>2 then [COLOCACION OC]-2 else null
-
-LIBERACION OC CS = if ([CLASE DE DOC]="ZPAN" or [CLASE DE DOC]="ZPAI") and [CARACTER DE GC]="LOCAL CS" and [TIEMPOS DE APROBACION OC]<>null and [TIEMPOS DE APROBACION OC]>2 then [TIEMPOS DE APROBACION OC]-2 else null
-
-ENTREGA DEL PROVEEDOR CS = if ([CLASE DE DOC]="ZPAN" or [CLASE DE DOC]="ZPAI") and [CARACTER DE GC]="LOCAL CS" and [DIF_ENTREGA_SELLO]<>null and [DIF_ENTREGA_SELLO]<0 then Number.Abs([DIF_ENTREGA_SELLO]) else null
-
-PLAZO DE ENTREGA EXCEDIDO CS = if [CARACTER DE GC]="LOCAL CS" and [PLAZO DE ENTREGA]<>null and [PLAZO DE ENTREGA]<0 then Number.Abs([PLAZO DE ENTREGA]) else null
-
-PROYECTO = if List.Sum({[LIBERACION SOLPED CS], [COLOCACION OC CS], [LIBERACION OC CS], [ENTREGA DEL PROVEEDOR CS], [PLAZO DE ENTREGA EXCEDIDO CS]}) > 0 then 1 else null`
-
-: areaName === 'PERIODO CORTO' ? `<b>Lógica de Cálculo PERIODO CORTO (Power Query M):</b>
 
 PERIODO CORTO = if [FECHAENTREGAMUYCERCANA] = 1 then 1 else null`
 
