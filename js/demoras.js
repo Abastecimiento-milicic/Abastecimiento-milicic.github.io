@@ -2425,10 +2425,12 @@ EQUIPOS MENORES = if List.Sum({[PREPARACION], [TRANSPORTEyALM]}) > 0 then 1 else
                   }
 
                   initializeUIWithData(headers, processed);
+                  hideLoader();
               })
               .catch(err => {
                   console.error(err);
                   showError("Error cargando CSV: " + err.message);
+                  hideLoader();
               });
       }
 
