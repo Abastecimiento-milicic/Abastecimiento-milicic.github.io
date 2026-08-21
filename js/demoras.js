@@ -240,48 +240,54 @@
   }
 
   function getMonthKeyFromRow(r) {
+      if (r._monthKey !== undefined) return r._monthKey;
+      
+      let res = null;
       if (MES_COL) {
           const m = clean(r[MES_COL]);
-          if (!m) return null;
-          if (m.match(/^\d{4}-\d{2}$/)) return m;
+          if (m) {
+              if (m.match(/^\d{4}-\d{2}$/)) {
+                  res = m;
+              } else {
+                  let year = null;
+                  if (YEAR_COL) {
+                      const yVal = clean(r[YEAR_COL]);
+                      if (yVal && yVal.match(/^\d{4}$/)) {
+                          year = yVal;
+                      }
+                  }
+                  if (!year && FECHA_COL) {
+                      const d = parseDateAny(r[FECHA_COL]);
+                      if (d) {
+                          year = String(d.getFullYear());
+                      }
+                  }
+                  if (!year) {
+                      year = "2025";
+                  }
 
-          let year = null;
-          if (YEAR_COL) {
-              const yVal = clean(r[YEAR_COL]);
-              if (yVal && yVal.match(/^\d{4}$/)) {
-                  year = yVal;
+                  const meses = {
+                      "enero": "01", "febrero": "02", "marzo": "03", "abril": "04",
+                      "mayo": "05", "junio": "06", "julio": "07", "agosto": "08",
+                      "septiembre": "09", "octubre": "10", "noviembre": "11", "diciembre": "12"
+                  };
+                  const k = norm(m).toLowerCase();
+                  if (k in meses) {
+                      res = `${year}-${meses[k]}`;
+                  } else {
+                      const d = parseDateAny(m);
+                      if (d) res = monthKey(d);
+                  }
               }
           }
-          if (!year && FECHA_COL) {
-              const d = parseDateAny(r[FECHA_COL]);
-              if (d) {
-                  year = String(d.getFullYear());
-              }
-          }
-          if (!year) {
-              year = "2025";
-          }
-
-          const meses = {
-              "enero": "01", "febrero": "02", "marzo": "03", "abril": "04",
-              "mayo": "05", "junio": "06", "julio": "07", "agosto": "08",
-              "septiembre": "09", "octubre": "10", "noviembre": "11", "diciembre": "12"
-          };
-          const k = norm(m).toLowerCase();
-          if (k in meses) {
-              return `${year}-${meses[k]}`;
-          }
-
-          const d = parseDateAny(m);
-          if (d) return monthKey(d);
-
-          return null;
       }
-      if (FECHA_COL) {
+      if (!res && FECHA_COL) {
           const d = parseDateAny(r[FECHA_COL]);
-          return d ? monthKey(d) : null;
+          if (d) res = monthKey(d);
       }
-      return null;
+      
+      r._monthKey = res;
+      return res;
   }
 
   /* ============================

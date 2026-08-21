@@ -1313,23 +1313,25 @@
       else if (tabName === 'servicios') body.className = 'page-cumplimiento'; // comparte estilos con cumplimiento
       
       // 7. Inicializar de forma diferida (Lazy Load / On-Demand)
-      if (tabName === 'cumplimiento') {
-        if (typeof window.initCumplimiento === 'function') {
-          window.initCumplimiento();
+      setTimeout(() => {
+        if (tabName === 'cumplimiento') {
+          if (typeof window.initCumplimiento === 'function') {
+            window.initCumplimiento();
+          }
+        } else if (tabName === 'mm') {
+          if (typeof window.initMM === 'function') {
+            window.initMM();
+          }
+        } else if (tabName === 'demoras') {
+          if (typeof window.initDemoras === 'function') {
+            window.initDemoras();
+          }
+        } else if (tabName === 'servicios') {
+          if (typeof window.initServicios === 'function') {
+            window.initServicios();
+          }
         }
-      } else if (tabName === 'mm') {
-        if (typeof window.initMM === 'function') {
-          window.initMM();
-        }
-      } else if (tabName === 'demoras') {
-        if (typeof window.initDemoras === 'function') {
-          window.initDemoras();
-        }
-      } else if (tabName === 'servicios') {
-        if (typeof window.initServicios === 'function') {
-          window.initServicios();
-        }
-      }
+      }, 50);
       
       // 8. Forzar evento de resize para que ECharts y Chart.js recalculen dimensiones de contenedores ocultos
       setTimeout(() => {
