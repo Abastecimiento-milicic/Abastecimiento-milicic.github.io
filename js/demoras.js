@@ -15,6 +15,7 @@
   ];
 
   const AREA_EXPECTED = [
+      "PERIODO CORTO",
       "PROYECTO",
       "ALMACEN",
       "ALMACÉN",
@@ -1365,6 +1366,15 @@
         {bg: "#ffedd5", text: "#9a3412", cell: "rgba(255, 237, 213, 0.4)", hex: "FFFFEDD5", cellHex: "FFFFF7ED"}, 
         {bg: "#ffedd5", text: "#9a3412", cell: "rgba(255, 237, 213, 0.4)", hex: "FFFFEDD5", cellHex: "FFFFF7ED"}
       ];
+    } else if (areaName === "PERIODO CORTO") {
+      extraHeaders = [
+        "F. EMISION NECESIDAD", "F. ENTREGA ESPERADA", "ENTREGA CERCANA"
+      ];
+      extraFields = [
+        r => r["FECHA DE EMISION NECESIDAD"],
+        r => r["FECHA ENTREGA ESPERADA"],
+        r => r["FECHAENTREGAMUYCERCANA"]
+      ];
     } else if (areaName === "PROYECTO") {
       extraHeaders = [
         "F. EMISION SOLPED", "F. APROBACION SOLPED", "T. APROBACION SOLPED", "DEMORA LIB. SOLPED",
@@ -1561,6 +1571,8 @@
     let explicacionArea = "";
     if (areaName.startsWith("COMPRAS")) {
       explicacionArea = "Un pedido tiene demoras en COMPRAS cuando los tiempos de Colocación de OC, Aprobación de OC o la Entrega del Proveedor superan los plazos máximos tolerados (según la clase de documento).";
+    } else if (areaName === "PERIODO CORTO") {
+      explicacionArea = "Un pedido tiene demoras en PERIODO CORTO cuando la Fecha de Entrega Esperada estǭ demasiado cercana o ya fue excedida en relacin a los plazos lgicos.";
     } else if (areaName === "PROYECTO") {
       explicacionArea = "Un pedido tiene demoras en PROYECTO cuando la Liberación de Solped, Colocación/Liberación de OC o Entrega del Proveedor exceden los plazos para el Centro de Servicios.";
     } else if (areaName === "ALMACÉN") {
@@ -1731,7 +1743,11 @@ ENTREGA DEL PROVEEDOR CS = if ([CLASE DE DOC]="ZPAN" or [CLASE DE DOC]="ZPAI") a
 
 PLAZO DE ENTREGA EXCEDIDO CS = if [CARACTER DE GC]="LOCAL CS" and [PLAZO DE ENTREGA]<>null and [PLAZO DE ENTREGA]<0 then Number.Abs([PLAZO DE ENTREGA]) else null
 
-PROYECTO = if List.Sum({[LIBERACION SOLPED CS], [FECHAENTREGAMUYCERCANA], [COLOCACION OC CS], [LIBERACION OC CS], [ENTREGA DEL PROVEEDOR CS], [PLAZO DE ENTREGA EXCEDIDO CS]}) > 0 then 1 else null`
+PROYECTO = if List.Sum({[LIBERACION SOLPED CS], [COLOCACION OC CS], [LIBERACION OC CS], [ENTREGA DEL PROVEEDOR CS], [PLAZO DE ENTREGA EXCEDIDO CS]}) > 0 then 1 else null`
+
+: areaName === 'PERIODO CORTO' ? `<b>Lógica de Cálculo PERIODO CORTO (Power Query M):</b>
+
+PERIODO CORTO = if [FECHAENTREGAMUYCERCANA] = 1 then 1 else null`
 
 : areaName.startsWith('COMPRAS') ? (function(){
   const isSede = areaName === "COMPRAS";
@@ -2015,7 +2031,7 @@ EQUIPOS MENORES = if List.Sum({[PREPARACION], [TRANSPORTEyALM]}) > 0 then 1 else
                     "PLAZO DE ENTREGA EXCEDIDO EQUIPOS", "COLOCACION OC AGV", "LIBERACION OC AGV",
                     "ENTREGA DEL PROVEEDOR AGV", "PLAZO DE ENTREGA EXCEDIDO AGV", "dPREPARACION",
                     "FECHAENTREGAMUYCERCANA", "dTRANSPORTEyALM", "PREPARACION", "TRANSPORTEyALM",
-                    "EQUIPOS MENORES", "PROYECTO", "ALMACÉN", "TRASLADO", "EXPEDICION", "COMPRAS", "COMPRAS EQUIPOS", "COMPRAS AGV"
+                    "EQUIPOS MENORES", "PERIODO CORTO", "PROYECTO", "ALMACÉN", "TRASLADO", "EXPEDICION", "COMPRAS", "COMPRAS EQUIPOS", "COMPRAS AGV"
                   ];
                   virtualCols.forEach(col => {
                     if (!headers.includes(col)) headers.push(col);
@@ -2394,7 +2410,10 @@ EQUIPOS MENORES = if List.Sum({[PREPARACION], [TRANSPORTEyALM]}) > 0 then 1 else
                     r["EQUIPOS MENORES"] = (r["PREPARACION"] > 0 || r["TRANSPORTEyALM"] > 0) ? 1 : null;
                     
                     // PROYECTO
-                    r["PROYECTO"] = (r["LIBERACION SOLPED CS"] > 0 || r["FECHAENTREGAMUYCERCANA"] === 1 || r["COLOCACION OC CS"] > 0 || r["LIBERACION OC CS"] > 0 || r["ENTREGA DEL PROVEEDOR CS"] > 0 || r["PLAZO DE ENTREGA EXCEDIDO CS"] > 0) ? 1 : null;
+                    r["PROYECTO"] = (r["LIBERACION SOLPED CS"] > 0 || r["COLOCACION OC CS"] > 0 || r["LIBERACION OC CS"] > 0 || r["ENTREGA DEL PROVEEDOR CS"] > 0 || r["PLAZO DE ENTREGA EXCEDIDO CS"] > 0) ? 1 : null;
+                    
+                    // PERIODO CORTO
+                    r["PERIODO CORTO"] = (r["FECHAENTREGAMUYCERCANA"] === 1) ? 1 : null;
                     
                     // ALMACÉN
                     r["ALMACÉN"] = ((r["ALMACEN ROSARIO"] || 0) + (r["ALMACEN SAN JUAN"] || 0) > 0) ? 1 : null;
@@ -2415,7 +2434,7 @@ EQUIPOS MENORES = if List.Sum({[PREPARACION], [TRANSPORTEyALM]}) > 0 then 1 else
                     r["COMPRAS AGV"] = ((r["COLOCACION OC AGV"] || 0) + (r["LIBERACION OC AGV"] || 0) + (r["ENTREGA DEL PROVEEDOR AGV"] || 0) + (r["PLAZO DE ENTREGA EXCEDIDO AGV"] || 0) > 0) ? 1 : null;
 
                     // Calculamos la suma de áreas y siempre agregamos la fila para coincidir con los FT
-                    const sumAreas = (r["EQUIPOS MENORES"] || 0) + (r["PROYECTO"] || 0) + (r["ALMACÉN"] || 0) + (r["TRASLADO"] || 0) + (r["EXPEDICION"] || 0) + (r["COMPRAS"] || 0) + (r["COMPRAS EQUIPOS"] || 0) + (r["COMPRAS AGV"] || 0);
+                    const sumAreas = (r["PERIODO CORTO"] || 0) + (r["EQUIPOS MENORES"] || 0) + (r["PROYECTO"] || 0) + (r["ALMACÉN"] || 0) + (r["TRASLADO"] || 0) + (r["EXPEDICION"] || 0) + (r["COMPRAS"] || 0) + (r["COMPRAS EQUIPOS"] || 0) + (r["COMPRAS AGV"] || 0);
                     r["_sumAreas"] = sumAreas;
                     processed.push(r);
                   }

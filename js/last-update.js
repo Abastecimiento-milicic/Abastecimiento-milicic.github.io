@@ -6,7 +6,7 @@ if (!cb) {
   cb = new Date().getTime();
   sessionStorage.setItem('mi_cache_buster', cb);
 }
-window.CACHE_BUSTER = cb + "_v6_csv_optimizado";
+window.CACHE_BUSTER = cb + "_v7_periodo_corto";
 
 window.forceRefreshData = function() {
   sessionStorage.removeItem('mi_cache_buster');
