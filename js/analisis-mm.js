@@ -2,7 +2,7 @@
   /* ============================
      CONFIG
   ============================ */
-  const csvUrl = "../data/ANALISIS-MM.csv";
+  const csvUrl = "data/ANALISIS-MM.csv";
   const DELIM = ";";
 
   const ESTADO_DOWNLOAD_FILES = {
@@ -505,9 +505,9 @@
   }
 
   function downloadByKind(kind) {
-    if (kind === "stock_nulo") downloadExternalFilteredCSV("../data/STO NULO.csv");
-    if (kind === "menor_pp") downloadExternalFilteredCSV("../data/MENOR A PP.csv");
-    if (kind === "mayor_stock_max") downloadByEstadoValue("Mayor a Stock Maximo", "../data/MAYOR STOCK MAX.csv");
+    if (kind === "stock_nulo") downloadExternalFilteredCSV("data/STO NULO.csv");
+    if (kind === "menor_pp") downloadExternalFilteredCSV("data/MENOR A PP.csv");
+    if (kind === "mayor_stock_max") downloadByEstadoValue("Mayor a Stock Maximo", "data/MAYOR STOCK MAX.csv");
   }
 
   function buildValorizacionStock(rows) {
@@ -647,11 +647,11 @@
     document.getElementById("mm_btnDLStoNuloPP")?.addEventListener("click", () => downloadSinRubro());
     document.getElementById("btnDLStoNuloPP")?.addEventListener("click", () => downloadSinRubro());
 
-    document.getElementById("mm_btnDLStockBase374")?.addEventListener("click", () => downloadStaticFile("../data/Stock Base Obra 0374.csv"));
-    document.getElementById("btnDLStockBase374")?.addEventListener("click", () => downloadStaticFile("../data/Stock Base Obra 0374.csv"));
+    document.getElementById("mm_btnDLStockBase374")?.addEventListener("click", () => downloadStaticFile("data/Stock Base Obra 0374.csv"));
+    document.getElementById("btnDLStockBase374")?.addEventListener("click", () => downloadStaticFile("data/Stock Base Obra 0374.csv"));
 
-    document.getElementById("mm_btnDLStockBase378")?.addEventListener("click", () => downloadStaticFile("../data/Stock Base Obra 0378.csv"));
-    document.getElementById("btnDLStockBase378")?.addEventListener("click", () => downloadStaticFile("../data/Stock Base Obra 0378.csv"));
+    document.getElementById("mm_btnDLStockBase378")?.addEventListener("click", () => downloadStaticFile("data/Stock Base Obra 0378.csv"));
+    document.getElementById("btnDLStockBase378")?.addEventListener("click", () => downloadStaticFile("data/Stock Base Obra 0378.csv"));
     
     // Delegación de eventos para botones dinámicos en leyenda
     document.addEventListener("click", (ev) => {

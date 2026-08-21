@@ -43,7 +43,7 @@
   /* ============================
      CONFIG
   ============================ */
-  const csvUrl = "../data/CUMPLIMIENTO_2025.csv";
+  const csvUrl = "data/CUMPLIMIENTO_2025.csv";
   const DELIM = ";";
 
   const FECHA_COL = "FECHA ENTREGA ESPERADA";

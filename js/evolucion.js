@@ -1,5 +1,5 @@
 (function() {
-  const EVOL_URL = "../data/EVOLUCION.csv";
+  const EVOL_URL = "data/EVOLUCION.csv";
   const EVOL_DELIM = ";";
 
   let evolData = [];

@@ -1,5 +1,5 @@
 (function() {
-  const csvUrl = "../data/SERVICIOS OBRA.csv";
+  const csvUrl = "data/SERVICIOS OBRA.csv";
   const DELIM = ";";
 
   const CLIENT_COL_NAME = "CLIENTE";
