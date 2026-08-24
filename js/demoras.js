@@ -1368,11 +1368,10 @@
       ];
     } else if (areaName === "PERIODO CORTO") {
       extraHeaders = [
-        "F. EMISION NECESIDAD", "F. ENTREGA ESPERADA", "ENTREGA CERCANA"
+        "DÍAS DIFERENCIA", "ENTREGA CERCANA"
       ];
       extraFields = [
-        r => r["FECHA DE EMISION NECESIDAD"],
-        r => r["FECHA ENTREGA ESPERADA"],
+        r => getDaysDiff(r["FECHA DE EMISION NECESIDAD"], r["FECHA ENTREGA ESPERADA"]),
         r => r["FECHAENTREGAMUYCERCANA"]
       ];
     } else if (areaName === "PROYECTO") {
