@@ -55,83 +55,72 @@
       </div>
     </div>
 
-    <!-- FILTRO -->
     <section class="panel">
-      <div class="panel-title">FILTROS
-        <button class="help-btn" onclick="openHelp('Filtro — Análisis MM', `
+      <div class="panel-title">FILTROS Y DISPONIBILIDAD
+        <button class="help-btn" onclick="openHelp('Filtros y Disponibilidad — Análisis MM', `
           <h4>Cliente (Almacén)</h4>
-          <p>Seleccioná uno o varios almacenes para filtrar. </p>
+          <p>Seleccioná uno o varios almacenes para filtrar.</p>
           <h4>⬇ Descargar ANALISIS MM</h4>
           <p>Exporta el Maestro de materiales del almacén seleccionado, compatible con Excel (separador <strong>;</strong>).</p>
-          <div class=&quot;hm-tip&quot;>💡 Podés seleccionar múltiples almacenes con <strong>Ctrl + clic</strong>.</div>
-        `)" title="Ayuda sobre el filtro de almacén">ℹ</button>
-      </div>
-      <div class="panel-body mm-filter-row">
-        <div class="filter">
-          <label>CLIENTE (ALMACEN)</label>
-          <div class="mm-client-row">
-            <select id="clienteSelect" class="multi-select" multiple size="6"></select>
-          </div>
-
-          <div id="clienteHint" class="hint">Columna: -</div>
-          <div class="hint">Descarga segun el almacen seleccionado</div>
-          <div class="hint">Mantén presionado Ctrl y haz clic en los almacenes para seleccion multiple</div>
-        </div>
-      </div>
-
-
-
-      <div class="filter mm-source">
-        <div class="hint"><b>Fuente:</b> ANALISIS-MM.csv</div>
-      </div>
-      </div>
-    </section>
-
-    <!-- KPIs -->
-    <section class="panel">
-      <div class="panel-title">DISPONIBILIDAD
-        <button class="help-btn" onclick="openHelp('KPIs — Disponibilidad', `
           <h4>📦 Cant. Materiales</h4>
           <p>Es la cantidad de materiales distintos planificados en el MM de acuerdo a la selección filtrada.</p>
           <h4>✅ Cant. Disponible</h4>
           <p>Es la cantidad de materiales disponibles (con stock distinto de cero) de acuerdo a la última actualización.</p>
           <h4>📈 % Disponible</h4>
           <p>Representa la cantidad de materiales disponibles en porcentaje.</p>
-        `)" title="Ayuda sobre los KPIs de disponibilidad">ℹ</button>
+          <div class=&quot;hm-tip&quot;>💡 Podés seleccionar múltiples almacenes con <strong>Ctrl + clic</strong>.</div>
+        `)" title="Ayuda sobre filtros y disponibilidad">ℹ</button>
       </div>
-
-      <div class="panel-body kpi-grid kpi-grid-3">
-        <div class="kpi kpi-blue">
-          <div class="kpi-head">
-            <div class="kpi-title">CANT MATERIALES</div>
-            <div class="kpi-icon">📦</div>
+      
+      <div class="panel-body" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch;">
+        
+        <!-- Lado Izquierdo: Filtro -->
+        <div class="filter" style="flex: 0 0 auto; width: 260px; display: flex; flex-direction: column;">
+          <label>CLIENTE (ALMACEN)</label>
+          <div class="mm-client-row" style="flex: 1;">
+            <select id="clienteSelect" class="multi-select" multiple size="6" style="height: 100%; width: 100%;"></select>
           </div>
-          <div id="kpiMat" class="kpi-value">-</div>
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto; gap: 8px;">
-            <div class="kpi-sub kpi-sub-strong" style="margin: 0;">Materiales distintos</div>
-            <button id="btnDLBaseMM" class="btn btn-outline" type="button" title="Descargar ANALISIS-MM.csv" style="min-width: auto !important; width: auto !important;">
-              ⬇ ANALISIS MM
-            </button>
+          <div id="clienteHint" class="hint">Columna: -</div>
+          <div class="hint">Descarga segun el almacen seleccionado</div>
+          <div class="hint">Mantén presionado Ctrl y haz clic en los almacenes para seleccion multiple</div>
+          <div class="hint" style="margin-top: 5px;"><b>Fuente:</b> ANALISIS-MM.csv</div>
+        </div>
+        
+        <!-- Lado Derecho: KPIs -->
+        <div class="kpi-grid kpi-grid-3" style="flex: 1 1 0%; align-content: center;">
+          <div class="kpi kpi-blue">
+            <div class="kpi-head">
+              <div class="kpi-title">CANT MATERIALES</div>
+              <div class="kpi-icon">📦</div>
+            </div>
+            <div id="kpiMat" class="kpi-value">-</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto; gap: 8px;">
+              <div class="kpi-sub kpi-sub-strong" style="margin: 0;">Materiales distintos</div>
+              <button id="btnDLBaseMM" class="btn btn-outline" type="button" title="Descargar ANALISIS-MM.csv" style="min-width: auto !important; width: auto !important; padding: 4px 8px !important; font-size: 10px !important;">
+                ⬇ ANALISIS MM
+              </button>
+            </div>
+          </div>
+
+          <div class="kpi kpi-green">
+            <div class="kpi-head">
+              <div class="kpi-title">CANT DISPONIBLE</div>
+              <div class="kpi-icon">✅</div>
+            </div>
+            <div id="kpiDisp" class="kpi-value">-</div>
+            <div class="kpi-sub kpi-sub-strong">Materiales con Libre utilización &gt; 0</div>
+          </div>
+
+          <div class="kpi kpi-amber">
+            <div class="kpi-head">
+              <div class="kpi-title">DISPONIBLE</div>
+              <div class="kpi-icon">📈</div>
+            </div>
+            <div id="kpiPct" class="kpi-value">-</div>
+            <div class="kpi-sub kpi-sub-strong">Disponible / Materiales</div>
           </div>
         </div>
 
-        <div class="kpi kpi-green">
-          <div class="kpi-head">
-            <div class="kpi-title">CANT DISPONIBLE</div>
-            <div class="kpi-icon">✅</div>
-          </div>
-          <div id="kpiDisp" class="kpi-value">-</div>
-          <div class="kpi-sub kpi-sub-strong">Materiales con Libre utilización &gt; 0</div>
-        </div>
-
-        <div class="kpi kpi-amber">
-          <div class="kpi-head">
-            <div class="kpi-title">DISPONIBLE</div>
-            <div class="kpi-icon">📈</div>
-          </div>
-          <div id="kpiPct" class="kpi-value">-</div>
-          <div class="kpi-sub kpi-sub-strong">Disponible / Materiales</div>
-        </div>
       </div>
     </section>
 
