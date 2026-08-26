@@ -1,12 +1,12 @@
 // Editá SOLO este archivo para cambiar la fecha mostrada en el header.
-window.LAST_UPDATE = "24/08/2026";
+window.LAST_UPDATE = "26/08/2026";
 
 let cb = sessionStorage.getItem('mi_cache_buster');
 if (!cb) {
   cb = new Date().getTime();
   sessionStorage.setItem('mi_cache_buster', cb);
 }
-window.CACHE_BUSTER = cb + "_v7_periodo_corto";
+window.CACHE_BUSTER = cb + "_v8_periodo_corto";
 
 window.forceRefreshData = function() {
   sessionStorage.removeItem('mi_cache_buster');
