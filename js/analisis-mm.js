@@ -6,10 +6,10 @@
   const DELIM = ";";
 
   const ESTADO_DOWNLOAD_FILES = {
-    1: "STO NULO.csv",
-    2: "MENOR A PP.csv",
-    3: "MAYOR AL PP.csv",
-    4: "MAYOR STOCK MAX.csv"
+    1: "data/STO NULO.csv",
+    2: "data/MENOR A PP.csv",
+    3: "data/MAYOR AL PP.csv",
+    4: "data/MAYOR STOCK MAX.csv"
   };
 
   const CLIENT_CANDIDATES = ["ALMACEN", "Almacén", "Almacen", "ALMACÉN", "Cliente", "CLIENTE", "CLIENTE (ALMACEN)"];
