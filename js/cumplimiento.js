@@ -428,7 +428,8 @@
     if (prevValid.length) {
       [...sel.options].forEach(o => { if (prevSet.has(o.value)) o.selected = true; });
     } else {
-      const last = months.length >= 2 ? months[months.length - 2] : months[months.length - 1];
+      const explicitMonth = window.MES_POR_DEFECTO;
+      const last = (explicitMonth && months.includes(explicitMonth)) ? explicitMonth : (months.length > 0 ? months[months.length - 1] : null);
       if (last) {
         const optLast = [...sel.options].find(o => o.value === last);
         if (optLast) optLast.selected = true;
@@ -1559,4 +1560,7 @@
   };
 
 })();
+
+
+
 
